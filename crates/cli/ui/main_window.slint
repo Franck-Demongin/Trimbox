@@ -96,7 +96,7 @@ export component MainWindow inherits Window {
     VerticalBox {
         spacing: Theme.spacing;
         padding: Theme.spacing;
-        alignment: stretch;
+        alignment: start;
 
         Text {
             text: "Trimbox";
@@ -142,6 +142,11 @@ export component MainWindow inherits Window {
             LineEdit { text <=> root.crop-width-mm; placeholder-text: "85"; horizontal-stretch: 1; min-width: 120px; }
             Text { text: "Hauteur crop (mm)"; vertical-alignment: center; }
             LineEdit { text <=> root.crop-height-mm; placeholder-text: "55"; horizontal-stretch: 1; min-width: 120px; }
+        }
+
+        Rectangle {
+            min-height: 0px;
+            vertical-stretch: 1;
         }
 
         HorizontalBox {
