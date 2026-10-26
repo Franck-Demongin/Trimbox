@@ -208,7 +208,7 @@ export component MainWindow inherits Window {
         width: min(460px, root.width - Theme.spacing * 2);
         height: self.preferred-height;
         x: max(Theme.spacing, (root.width - self.width) / 2);
-        y: root.height - self.height - Theme.spacing;
+        y: root.height - self.height - Theme.spacing * 2;
         background: transparent;
 
         VerticalBox {
