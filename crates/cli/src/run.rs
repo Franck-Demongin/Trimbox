@@ -29,6 +29,59 @@ pub fn run() -> Result<()> {
             Ok(())
         }
         Some(Command::Pdf {
+            command: PdfCommand::Validate { path },
+        }) => {
+            if !path.is_file() {
+                bail!("chemin non fichier : {}", path.display());
+            }
+            let bytes = fs::read(&path)?;
+            let document = pdf::load_document(&bytes)?;
+            let report = trimbox_core::validate_pdf_x4(&document, &path.display().to_string());
+            println!("{}", report);
+            let code = report.exit_code();
+            if code != 0 {
+                std::process::exit(code);
+            }
+            Ok(())
+        }
+        Some(Command::Pdf {
+            command: PdfCommand::Normalize { input, output },
+        }) => {
+            if !input.is_file() {
+                bail!("chemin non fichier : {}", input.display());
+            }
+            if same_path(&input, &output) {
+                bail!("le fichier de sortie doit differer du fichier source");
+            }
+            let bytes = fs::read(&input)?;
+            let mut document = pdf::load_document(&bytes)
+                .map_err(|e| anyhow::anyhow!("lecture PDF impossible : {e}"))?;
+
+            let report = trimbox_core::normalize_pdf_x4(
+                &mut document,
+                &input.display().to_string(),
+                &output.display().to_string(),
+            )
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+            if report.blocked.is_none() {
+                let output_bytes = pdf::save_document(&mut document)
+                    .map_err(|e| anyhow::anyhow!("ecriture PDF impossible : {e}"))?;
+                fs::write(&output, output_bytes)?;
+            }
+
+            println!("{}", report);
+            let code = if report.blocked.is_some() {
+                2
+            } else {
+                report.after.exit_code()
+            };
+            if code != 0 {
+                std::process::exit(code);
+            }
+            Ok(())
+        }
+        Some(Command::Pdf {
             command:
                 PdfCommand::Crop {
                     input,

@@ -28,6 +28,10 @@ pub enum Command {
 pub enum PdfCommand {
     /// Affiche les informations et les boites d'un PDF.
     Info { path: PathBuf },
+    /// Valide la conformite PDF/X-4 d'un document.
+    Validate { path: PathBuf },
+    /// Normalise un document vers PDF/X-4.
+    Normalize { input: PathBuf, output: PathBuf },
     /// Recadre un PDF au centre aux dimensions indiquees.
     Crop {
         input: PathBuf,
