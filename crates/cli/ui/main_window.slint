@@ -1,4 +1,4 @@
-import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, StandardButton } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, StandardButton, Palette } from "std-widgets.slint";
 
 global Theme {
     out property <length> spacing: 8px;
@@ -184,8 +184,8 @@ export component MainWindow inherits Window {
                     }
 
                     Rectangle {
-                        background: #f7f7f7;
-                        border-color: #9a9a9a;
+                        background: Palette.alternate-background;
+                        border-color: Palette.border;
                         border-width: 1px;
                         border-radius: 6px;
                         horizontal-stretch: 1;
@@ -207,16 +207,22 @@ export component MainWindow inherits Window {
                             content-width: self.visible-width;
                             horizontal-scrollbar-policy: always-off;
 
-                            Text {
-                                text: root.report;
-                                width: 100%;
-                                min-width: 0px;
-                                wrap: word-wrap;
-                                vertical-alignment: top;
-                                horizontal-alignment: left;
-                                font-family: "monospace";
-                                font-size: 12px;
-                                color: #202020;
+                            VerticalBox {
+                                padding: Theme.spacing;
+                                spacing: 0px;
+                                alignment: stretch;
+
+                                Text {
+                                    text: root.report;
+                                    width: 100%;
+                                    min-width: 0px;
+                                    wrap: word-wrap;
+                                    vertical-alignment: top;
+                                    horizontal-alignment: left;
+                                    font-family: "monospace";
+                                    font-size: 12px;
+                                    color: Palette.foreground;
+                                }
                             }
                         }
                     }
