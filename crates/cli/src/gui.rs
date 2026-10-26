@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 use slint::ComponentHandle;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use trimbox_core::crop::crop_document;
 use trimbox_core::pdf::{load_document, save_document};
@@ -27,9 +28,11 @@ pub fn run() -> Result<()> {
                 .set_title("Ouvrir un PDF");
             if let Some(path) = dialog.pick_file() {
                 let source = path.display().to_string();
-                ui.set_source_path(source.clone().into());
                 let output = default_output_path(&path, "recadre");
+                ui.set_source_path(source.clone().into());
                 ui.set_output_path(output.display().to_string().into());
+                ui.set_output_available(false);
+                ui.set_report_available(false);
                 set_status(&ui, "Source chargée.".to_owned(), 0);
             }
         }
@@ -42,7 +45,8 @@ pub fn run() -> Result<()> {
                 .add_filter("PDF", &["pdf"])
                 .set_title("Enregistrer le PDF généré");
             if let Some(path) = dialog.save_file() {
-                ui.set_output_path(path.display().to_string().into());
+                let normalized = ensure_pdf_extension(path);
+                ui.set_output_path(normalized.display().to_string().into());
             }
         }
     });
@@ -54,12 +58,29 @@ pub fn run() -> Result<()> {
         }
     });
 
+    let open_weak = weak.clone();
+    ui.on_open_output(move || {
+        if let Some(ui) = open_weak.upgrade() {
+            open_output_gui(&ui, false);
+        }
+    });
+
+    let open_folder_weak = weak.clone();
+    ui.on_open_output_folder(move || {
+        if let Some(ui) = open_folder_weak.upgrade() {
+            open_output_gui(&ui, true);
+        }
+    });
+
     ui.run()
         .map_err(|error| anyhow::anyhow!("execution de l'interface impossible : {error}"))?;
     Ok(())
 }
 
 fn crop_document_gui(ui: &MainWindow) {
+    ui.set_output_available(false);
+    ui.set_report_available(false);
+
     let input = source_path(ui);
     if input.is_empty() {
         set_status(ui, "Choisir d'abord un fichier source.".to_owned(), 2);
@@ -88,14 +109,14 @@ fn crop_document_gui(ui: &MainWindow) {
         width,
         height
     ));
-    let output = {
+    let output = ensure_pdf_extension({
         let current = output_path(ui);
         if current.is_empty() {
             fallback
         } else {
             PathBuf::from(current)
         }
-    };
+    });
 
     if same_path(&input_path, &output) {
         set_status(
@@ -162,6 +183,7 @@ fn crop_document_gui(ui: &MainWindow) {
         .map(|metadata| metadata.len())
         .unwrap_or_default();
     ui.set_output_path(output.display().to_string().into());
+    ui.set_output_available(true);
 
     let warning_count = warning_count_for_crop(&report, &validation);
     let level = if warning_count > 0 { 1 } else { 0 };
@@ -414,6 +436,7 @@ fn set_report(
     ui.set_report_title(title.into());
     let report = format_report_body("report", &report);
     ui.set_report(report.into());
+    ui.set_report_available(true);
     set_status(ui, status, level);
 }
 
@@ -447,6 +470,69 @@ fn same_path(left: &Path, right: &Path) -> bool {
     match (std::fs::canonicalize(left), std::fs::canonicalize(right)) {
         (Ok(a), Ok(b)) => a == b,
         _ => false,
+    }
+}
+
+fn open_output_gui(ui: &MainWindow, folder: bool) {
+    let path = output_path(ui);
+    if path.is_empty() {
+        set_status(ui, "Aucun fichier généré disponible.".to_owned(), 2);
+        return;
+    }
+    let path = PathBuf::from(path);
+    let target = if folder {
+        path.parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| PathBuf::from("."))
+    } else {
+        path
+    };
+    match open_system_path(&target) {
+        Ok(()) => set_status(
+            ui,
+            if folder {
+                "Dossier ouvert.".to_owned()
+            } else {
+                "Fichier ouvert.".to_owned()
+            },
+            0,
+        ),
+        Err(error) => set_status(ui, format!("Ouverture impossible : {error}"), 2),
+    }
+}
+
+fn open_system_path(path: &Path) -> Result<()> {
+    let mut command = if cfg!(target_os = "windows") {
+        let mut command = Command::new("cmd");
+        command.arg("/C").arg("start").arg("").arg(path);
+        command
+    } else if cfg!(target_os = "macos") {
+        let mut command = Command::new("open");
+        command.arg(path);
+        command
+    } else {
+        let mut command = Command::new("xdg-open");
+        command.arg(path);
+        command
+    };
+    command
+        .spawn()
+        .context("impossible de lancer l'outil d'ouverture système")?;
+    Ok(())
+}
+
+fn ensure_pdf_extension(path: PathBuf) -> PathBuf {
+    let is_pdf = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.eq_ignore_ascii_case("pdf"))
+        .unwrap_or(false);
+    if is_pdf {
+        path
+    } else {
+        let mut value = path.into_os_string();
+        value.push(".pdf");
+        PathBuf::from(value)
     }
 }
 
@@ -586,6 +672,26 @@ mod report_format_tests {
         let validation = PdfXValidationReport::new("source.pdf", &Document::new());
         let summary = format_crop_summary(&report, &validation, 2048);
         assert!(summary.contains("Avertissements : aucun."));
+    }
+
+    #[test]
+    fn output_path_receives_pdf_extension_when_missing() {
+        assert_eq!(
+            ensure_pdf_extension(PathBuf::from("sortie")),
+            PathBuf::from("sortie.pdf")
+        );
+        assert_eq!(
+            ensure_pdf_extension(PathBuf::from("sortie.TXT")),
+            PathBuf::from("sortie.TXT.pdf")
+        );
+        assert_eq!(
+            ensure_pdf_extension(PathBuf::from("sortie.pdf")),
+            PathBuf::from("sortie.pdf")
+        );
+        assert_eq!(
+            ensure_pdf_extension(PathBuf::from("sortie.PDF")),
+            PathBuf::from("sortie.PDF")
+        );
     }
 
     #[test]

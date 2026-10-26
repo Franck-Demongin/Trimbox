@@ -17,12 +17,81 @@ export component MainWindow inherits Window {
     in-out property <string> crop-height-mm: "55";
     in property <string> report-title: "Résultat";
     in property <string> report: "";
+    in property <bool> output-available: false;
+    in property <bool> report-available: false;
     in property <string> status: "Prêt.";
     in property <int> status-level: 0;
 
     callback browse-source();
     callback browse-output();
     callback crop();
+    callback open-output();
+    callback open-output-folder();
+
+    report-popup := PopupWindow {
+        close-policy: close-on-click;
+        width: 760px;
+        height: 500px;
+
+        Rectangle {
+            background: #ffffff;
+            border-color: #9a9a9a;
+            border-width: 1px;
+            border-radius: 6px;
+
+            VerticalBox {
+                spacing: Theme.spacing;
+                padding: Theme.spacing;
+
+                Text {
+                    text: root.report-title;
+                    font-size: 14px;
+                    font-weight: 600;
+                    horizontal-alignment: left;
+                }
+
+                Rectangle {
+                    background: #f7f7f7;
+                    border-color: #9a9a9a;
+                    border-width: 1px;
+                    border-radius: 6px;
+                    horizontal-stretch: 1;
+                    vertical-stretch: 1;
+                    min-height: 240px;
+                    clip: true;
+
+                    VerticalBox {
+                        padding: 8px;
+
+                        ScrollView {
+                            width: 100%;
+                            content-width: self.visible-width;
+                            vertical-stretch: 1;
+                            horizontal-scrollbar-policy: always-off;
+
+                            Text {
+                                text: root.report;
+                                width: 100%;
+                                min-width: 0px;
+                                wrap: word-wrap;
+                                vertical-alignment: top;
+                                horizontal-alignment: left;
+                                font-family: "monospace";
+                                font-size: 12px;
+                                color: #202020;
+                            }
+                        }
+                    }
+                }
+
+                Button {
+                    text: "Fermer";
+                    horizontal-stretch: 0;
+                    clicked => { report-popup.close(); }
+                }
+            }
+        }
+    }
 
     VerticalBox {
         spacing: Theme.spacing;
@@ -75,51 +144,33 @@ export component MainWindow inherits Window {
             LineEdit { text <=> root.crop-height-mm; placeholder-text: "55"; horizontal-stretch: 1; min-width: 120px; }
         }
 
-        Button {
-            text: "Recadrer";
-            primary: true;
-            horizontal-stretch: 1;
-            clicked => { root.crop(); }
-        }
+        HorizontalBox {
+            spacing: Theme.spacing;
+            alignment: end;
 
-        Text {
-            text: root.report-title;
-            font-size: 14px;
-            font-weight: 600;
-            horizontal-alignment: left;
-        }
+            if root.report-available : Button {
+                text: "Rapport";
+                horizontal-stretch: 0;
+                clicked => { report-popup.show(); }
+            }
 
-        Rectangle {
-            background: #f7f7f7;
-            border-color: #9a9a9a;
-            border-width: 1px;
-            border-radius: 6px;
-            horizontal-stretch: 1;
-            vertical-stretch: 1;
-            min-height: 180px;
-            clip: true;
+            if root.output-available : Button {
+                text: "Ouvrir le fichier";
+                horizontal-stretch: 0;
+                clicked => { root.open-output(); }
+            }
 
-            VerticalBox {
-                padding: 8px;
+            if root.output-available : Button {
+                text: "Ouvrir le dossier";
+                horizontal-stretch: 0;
+                clicked => { root.open-output-folder(); }
+            }
 
-                ScrollView {
-                    width: 100%;
-                    content-width: self.visible-width;
-                    vertical-stretch: 1;
-                    horizontal-scrollbar-policy: always-off;
-
-                    Text {
-                        text: root.report;
-                        width: 100%;
-                        min-width: 0px;
-                        wrap: word-wrap;
-                        vertical-alignment: top;
-                        horizontal-alignment: left;
-                        font-family: "monospace";
-                        font-size: 12px;
-                        color: #202020;
-                    }
-                }
+            Button {
+                text: "Recadrer";
+                primary: true;
+                horizontal-stretch: 0;
+                clicked => { root.crop(); }
             }
         }
     }
