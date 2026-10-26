@@ -1,4 +1,4 @@
-import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, StandardButton } from "std-widgets.slint";
 
 global Theme {
     out property <length> spacing: 8px;
@@ -22,76 +22,13 @@ export component MainWindow inherits Window {
     in property <string> status: "Prêt.";
     in property <int> status-level: 0;
 
+    in-out property <bool> report-visible: false;
+
     callback browse-source();
     callback browse-output();
     callback crop();
     callback open-output();
     callback open-output-folder();
-
-    report-popup := PopupWindow {
-        close-policy: close-on-click;
-        width: 760px;
-        height: 500px;
-
-        Rectangle {
-            background: #ffffff;
-            border-color: #9a9a9a;
-            border-width: 1px;
-            border-radius: 6px;
-
-            VerticalBox {
-                spacing: Theme.spacing;
-                padding: Theme.spacing;
-
-                Text {
-                    text: root.report-title;
-                    font-size: 14px;
-                    font-weight: 600;
-                    horizontal-alignment: left;
-                }
-
-                Rectangle {
-                    background: #f7f7f7;
-                    border-color: #9a9a9a;
-                    border-width: 1px;
-                    border-radius: 6px;
-                    horizontal-stretch: 1;
-                    vertical-stretch: 1;
-                    min-height: 240px;
-                    clip: true;
-
-                    VerticalBox {
-                        padding: 8px;
-
-                        ScrollView {
-                            width: 100%;
-                            content-width: self.visible-width;
-                            vertical-stretch: 1;
-                            horizontal-scrollbar-policy: always-off;
-
-                            Text {
-                                text: root.report;
-                                width: 100%;
-                                min-width: 0px;
-                                wrap: word-wrap;
-                                vertical-alignment: top;
-                                horizontal-alignment: left;
-                                font-family: "monospace";
-                                font-size: 12px;
-                                color: #202020;
-                            }
-                        }
-                    }
-                }
-
-                Button {
-                    text: "Fermer";
-                    horizontal-stretch: 0;
-                    clicked => { report-popup.close(); }
-                }
-            }
-        }
-    }
 
     VerticalBox {
         spacing: Theme.spacing;
@@ -162,7 +99,10 @@ export component MainWindow inherits Window {
             if root.report-available : Button {
                 text: "Rapport";
                 horizontal-stretch: 0;
-                clicked => { report-popup.show(); }
+                clicked => {
+                    root.report-visible = true;
+                    report_popup.show();
+                }
             }
 
             if root.output-available : Button {
@@ -182,6 +122,113 @@ export component MainWindow inherits Window {
                 primary: true;
                 horizontal-stretch: 0;
                 clicked => { root.crop(); }
+            }
+        }
+    }
+
+    report_popup := PopupWindow {
+        close-policy: no-auto-close;
+        x: 0px;
+        y: 0px;
+        width: root.width;
+        height: root.height;
+
+        report_focus := FocusScope {
+            x: 0px;
+            y: 0px;
+            width: parent.width;
+            height: parent.height;
+
+            capture-key-pressed(event) => {
+                if root.report-visible && event.text == Key.Escape {
+                    report_popup.close();
+                    root.report-visible = false;
+                    return accept;
+                }
+                reject
+            }
+
+            Rectangle {
+                x: 0px;
+                y: 0px;
+                width: parent.width;
+                height: parent.height;
+                background: #00000080;
+
+                backdrop := TouchArea {
+                    clicked => {
+                        report_popup.close();
+                        root.report-visible = false;
+                    }
+                }
+            }
+
+            report_dialog := Dialog {
+                x: (root.width - self.width) / 2;
+                y: (root.height - self.height) / 2;
+                width: 760px;
+                height: 500px;
+                title: root.report-title;
+
+                VerticalBox {
+                    padding: Theme.spacing;
+                    spacing: Theme.spacing;
+                    alignment: stretch;
+
+                    Text {
+                        text: root.report-title;
+                        font-size: 14px;
+                        font-weight: 600;
+                        horizontal-alignment: left;
+                        vertical-stretch: 0;
+                    }
+
+                    Rectangle {
+                        background: #f7f7f7;
+                        border-color: #9a9a9a;
+                        border-width: 1px;
+                        border-radius: 6px;
+                        horizontal-stretch: 1;
+                        vertical-stretch: 1;
+                        min-height: 240px;
+                        clip: true;
+
+                        TouchArea {
+                            x: 0px;
+                            y: 0px;
+                            width: parent.width;
+                            height: parent.height;
+                            clicked => { }
+                        }
+
+                        ScrollView {
+                            horizontal-stretch: 1;
+                            vertical-stretch: 1;
+                            content-width: self.visible-width;
+                            horizontal-scrollbar-policy: always-off;
+
+                            Text {
+                                text: root.report;
+                                width: 100%;
+                                min-width: 0px;
+                                wrap: word-wrap;
+                                vertical-alignment: top;
+                                horizontal-alignment: left;
+                                font-family: "monospace";
+                                font-size: 12px;
+                                color: #202020;
+                            }
+                        }
+                    }
+                }
+
+                StandardButton {
+                    kind: close;
+                    clicked => {
+                        report_popup.close();
+                        root.report-visible = false;
+                    }
+                }
             }
         }
     }
