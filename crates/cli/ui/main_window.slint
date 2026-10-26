@@ -117,22 +117,30 @@ export component MainWindow inherits Window {
         padding: Theme.spacing;
         alignment: stretch;
 
-        HorizontalBox {
+        VerticalBox {
             spacing: Theme.spacing;
-            alignment: stretch;
             vertical-stretch: 0;
-            Text { text: "Source"; min-width: Theme.label-min-width; vertical-alignment: center; }
-            LineEdit { text <=> root.source-path; placeholder-text: "Chemin du PDF source"; horizontal-stretch: 1; }
-            Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-source(); } }
+            Text { text: "Source"; vertical-alignment: center; }
+            HorizontalBox {
+                spacing: Theme.spacing;
+                alignment: stretch;
+                vertical-stretch: 0;
+                LineEdit { text <=> root.source-path; placeholder-text: "Chemin du PDF source"; horizontal-stretch: 1; }
+                Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-source(); } }
+            }
         }
 
-        HorizontalBox {
+        VerticalBox {
             spacing: Theme.spacing;
-            alignment: stretch;
             vertical-stretch: 0;
-            Text { text: "Sortie"; min-width: Theme.label-min-width; vertical-alignment: center; }
-            LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré"; horizontal-stretch: 1; }
-            Button { text: "Choisir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
+            Text { text: "Sortie"; vertical-alignment: center; }
+            HorizontalBox {
+                spacing: Theme.spacing;
+                alignment: stretch;
+                vertical-stretch: 0;
+                LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré"; horizontal-stretch: 1; }
+                Button { text: "Choisir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
+            }
         }
 
         HorizontalBox {
