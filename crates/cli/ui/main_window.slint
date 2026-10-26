@@ -2,14 +2,25 @@ import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, StandardButto
 
 global Theme {
     out property <length> spacing: 8px;
+    out property <length> window-preferred-width: 860px;
+    out property <length> window-preferred-height: 520px;
+    out property <length> window-min-width: 760px;
+    out property <length> window-min-height: 460px;
+    out property <length> dialog-width: 760px;
+    out property <length> dialog-height: 500px;
+    out property <length> dialog-vertical-margin: 20px;
+    out property <length> label-min-width: 72px;
+    out property <length> crop-field-min-width: 120px;
+    out property <length> frame-min-height: 240px;
+    out property <length> corner-radius: 6px;
 }
 
 export component MainWindow inherits Window {
     title: "Trimbox";
-    preferred-width: 860px;
-    preferred-height: 520px;
-    min-width: 760px;
-    min-height: 460px;
+    preferred-width: Theme.window-preferred-width;
+    preferred-height: Theme.window-preferred-height;
+    min-width: Theme.window-min-width;
+    min-height: Theme.window-min-height;
 
     in-out property <string> source-path: "";
     in-out property <string> output-path: "";
@@ -60,7 +71,7 @@ export component MainWindow inherits Window {
             background: root.status-level == 2 ? #fdeeee : (root.status-level == 1 ? #fff7e6 : #eef7ee);
             border-color: root.status-level == 2 ? #c62828 : (root.status-level == 1 ? #f9a825 : #2e7d32);
             border-width: 1px;
-            border-radius: 6px;
+            border-radius: Theme.corner-radius;
             horizontal-stretch: 1;
             vertical-stretch: 0;
 
@@ -82,7 +93,7 @@ export component MainWindow inherits Window {
             spacing: Theme.spacing;
             alignment: stretch;
             vertical-stretch: 0;
-            Text { text: "Source"; min-width: 72px; vertical-alignment: center; }
+            Text { text: "Source"; min-width: Theme.label-min-width; vertical-alignment: center; }
             LineEdit { text <=> root.source-path; placeholder-text: "Chemin du PDF source"; horizontal-stretch: 1; }
             Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-source(); } }
         }
@@ -91,7 +102,7 @@ export component MainWindow inherits Window {
             spacing: Theme.spacing;
             alignment: stretch;
             vertical-stretch: 0;
-            Text { text: "Sortie"; min-width: 72px; vertical-alignment: center; }
+            Text { text: "Sortie"; min-width: Theme.label-min-width; vertical-alignment: center; }
             LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré"; horizontal-stretch: 1; }
             Button { text: "Choisir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
         }
@@ -100,9 +111,9 @@ export component MainWindow inherits Window {
             spacing: Theme.spacing;
             vertical-stretch: 0;
             Text { text: "Largeur crop (mm)"; vertical-alignment: center; }
-            LineEdit { text <=> root.crop-width-mm; placeholder-text: "85"; horizontal-stretch: 1; min-width: 120px; }
+            LineEdit { text <=> root.crop-width-mm; placeholder-text: "85"; horizontal-stretch: 1; min-width: Theme.crop-field-min-width; }
             Text { text: "Hauteur crop (mm)"; vertical-alignment: center; }
-            LineEdit { text <=> root.crop-height-mm; placeholder-text: "55"; horizontal-stretch: 1; min-width: 120px; }
+            LineEdit { text <=> root.crop-height-mm; placeholder-text: "55"; horizontal-stretch: 1; min-width: Theme.crop-field-min-width; }
         }
 
         Rectangle {
@@ -180,8 +191,8 @@ export component MainWindow inherits Window {
             report_dialog := Dialog {
                 x: (root.width - self.width) / 2;
                 y: (root.height - self.height) / 2;
-                width: root.width >= 760px ? 760px : root.width;
-                height: root.height >= 520px ? 500px : root.height - 20px;
+                width: root.width >= Theme.dialog-width ? Theme.dialog-width : root.width;
+                height: root.height >= Theme.window-preferred-height ? Theme.dialog-height : root.height - Theme.dialog-vertical-margin;
                 title: root.report-title;
 
                 VerticalBox {
@@ -193,10 +204,10 @@ export component MainWindow inherits Window {
                         background: Palette.alternate-background;
                         border-color: Palette.border;
                         border-width: 1px;
-                        border-radius: 6px;
+                        border-radius: Theme.corner-radius;
                         horizontal-stretch: 1;
                         vertical-stretch: 1;
-                        min-height: 240px;
+                        min-height: Theme.frame-min-height;
                         clip: true;
 
                         TouchArea {
