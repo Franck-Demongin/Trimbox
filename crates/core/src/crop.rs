@@ -7,26 +7,26 @@ use crate::source_characteristics::analyze_source;
 
 pub fn crop_document(
     document: &mut Document,
-    width_cm: f64,
-    height_cm: f64,
+    width_mm: f64,
+    height_mm: f64,
     source: &str,
     output: &str,
 ) -> Result<CropReport, Error> {
-    if !width_cm.is_finite() || width_cm <= 0.0 {
+    if !width_mm.is_finite() || width_mm <= 0.0 {
         return Err(Error::invalid_dimension(format!(
-            "largeur invalide : {width_cm}"
+            "largeur invalide : {width_mm}"
         )));
     }
-    if !height_cm.is_finite() || height_cm <= 0.0 {
+    if !height_mm.is_finite() || height_mm <= 0.0 {
         return Err(Error::invalid_dimension(format!(
-            "hauteur invalide : {height_cm}"
+            "hauteur invalide : {height_mm}"
         )));
     }
 
-    let requested_width_pt = boxes::cm_to_pt(width_cm);
-    let requested_height_pt = boxes::cm_to_pt(height_cm);
+    let requested_width_pt = boxes::mm_to_pt(width_mm);
+    let requested_height_pt = boxes::mm_to_pt(height_mm);
 
-    let mut report = CropReport::new(source, output, width_cm, height_cm);
+    let mut report = CropReport::new(source, output, width_mm, height_mm);
     report.source_characteristics = analyze_source(document);
     report.color_note = report.source_characteristics.color_note();
     let pages = document.get_pages();
@@ -62,11 +62,16 @@ pub fn crop_document(
 
         let offset_x = (src_width - requested_width_pt) / 2.0 + media_box.llx;
         let offset_y = (src_height - requested_height_pt) / 2.0 + media_box.lly;
+        let crop_width = requested_width_pt;
+        let crop_height = requested_height_pt;
+
+        // The crop itself is rebased later, after the content is translated, so coordinates
+        // remain consistent with the new origin.
         let after = Rect {
-            llx: offset_x,
-            lly: offset_y,
-            urx: offset_x + requested_width_pt,
-            ury: offset_y + requested_height_pt,
+            llx: 0.0,
+            lly: 0.0,
+            urx: crop_width,
+            ury: crop_height,
         };
 
         page_dict.set(
@@ -114,6 +119,23 @@ pub fn crop_document(
                 ),
             );
         }
+        if page_dict.has(b"ArtBox") {
+            page_dict.set(
+                "ArtBox",
+                lopdf::Object::Array(
+                    after
+                        .to_array()
+                        .into_iter()
+                        .map(lopdf::Object::Real)
+                        .collect(),
+                ),
+            );
+        }
+
+        // The page dictionary borrow is no longer needed after its boxes have
+        // been updated; explicitly drop it before adding translated content.
+        let _ = page_dict;
+        translate_page_content(document, *page_id, offset_x, offset_y)?;
 
         report.add_page(*page_number, media_box, after);
     }
@@ -121,6 +143,58 @@ pub fn crop_document(
     // Ayant ajouté toutes les pages, finalize confirme le compte.
     report.finalize();
     Ok(report)
+}
+
+fn translate_page_content(
+    document: &mut lopdf::Document,
+    page_id: lopdf::ObjectId,
+    offset_x: f64,
+    offset_y: f64,
+) -> Result<(), Error> {
+    // Preserve the current page content and shift it by the crop's offset, so the
+    // resulting PDF's MediaBox can keep a (0, 0) lower-left origin. That is what
+    // downstream consumers, including Imposer, expect from page dimensions.
+    let original_contents = {
+        let page_obj = document
+            .get_object(page_id)
+            .map_err(|e| Error::Pdf(e.to_string()))?;
+        let page_dict = page_obj.as_dict().map_err(|e| Error::Pdf(e.to_string()))?;
+        page_dict.get(b"Contents").ok().cloned()
+    };
+
+    let tx = -offset_x;
+    let ty = -offset_y;
+    let prefix_data = format!("q 1 0 0 1 {tx} {ty} cm\n");
+    let prefix_id = document.add_object(lopdf::Stream::new(
+        lopdf::Dictionary::new(),
+        prefix_data.into_bytes(),
+    ));
+    let suffix_id = document.add_object(lopdf::Stream::new(
+        lopdf::Dictionary::new(),
+        b"Q\n".to_vec(),
+    ));
+
+    let mut refs = vec![lopdf::Object::Reference(prefix_id)];
+    match original_contents {
+        Some(lopdf::Object::Reference(id)) => refs.push(lopdf::Object::Reference(id)),
+        Some(lopdf::Object::Array(items)) => refs.extend(items),
+        Some(lopdf::Object::Stream(stream)) => {
+            let stream_id = document.add_object(lopdf::Object::Stream(stream));
+            refs.push(lopdf::Object::Reference(stream_id));
+        }
+        Some(_) | None => {}
+    }
+    refs.push(lopdf::Object::Reference(suffix_id));
+
+    let page_obj = document
+        .get_object_mut(page_id)
+        .map_err(|e| Error::Pdf(e.to_string()))?;
+    let page_dict = page_obj
+        .as_dict_mut()
+        .map_err(|e| Error::Pdf(e.to_string()))?;
+    page_dict.set(b"Contents", lopdf::Object::Array(refs));
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -171,14 +245,14 @@ mod tests {
         assert_eq!(report.page_count, 1);
         let boxes = read_page_boxes(&doc).expect("boxes");
         let media = boxes[0].media.expect("media");
-        let expected_w = boxes::cm_to_pt(10.0);
+        let expected_w = boxes::mm_to_pt(10.0);
         assert!((media.width() - expected_w).abs() < 0.5);
     }
 
     #[test]
     fn rejects_too_large_crop() {
         let mut doc = build_pdf(100.0, 100.0);
-        let result = crop_document(&mut doc, 10.0, 10.0, "in.pdf", "out.pdf");
+        let result = crop_document(&mut doc, 100.0, 100.0, "in.pdf", "out.pdf");
         assert!(result.is_err());
     }
 

@@ -599,7 +599,7 @@ mod m3_tests {
         );
         let info_id = document.add_object(Object::Dictionary(info));
 
-        let mut xmp = Dictionary::new();
+        let xmp = Dictionary::new();
         let xmp_id =
             document.add_object(Object::Stream(Stream::new(xmp, b"<x:xmpmeta/>".to_vec())));
 

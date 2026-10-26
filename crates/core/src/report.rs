@@ -14,8 +14,8 @@ pub struct PageCropChange {
 pub struct CropReport {
     pub source: String,
     pub output: String,
-    pub requested_width_cm: f64,
-    pub requested_height_cm: f64,
+    pub requested_width_mm: f64,
+    pub requested_height_mm: f64,
     pub requested_width_pt: f64,
     pub requested_height_pt: f64,
     pub page_count: usize,
@@ -30,23 +30,23 @@ impl CropReport {
     pub fn new(
         source: impl Into<String>,
         output: impl Into<String>,
-        requested_width_cm: f64,
-        requested_height_cm: f64,
+        requested_width_mm: f64,
+        requested_height_mm: f64,
     ) -> Self {
         Self {
             source: source.into(),
             output: output.into(),
-            requested_width_cm,
-            requested_height_cm,
-            requested_width_pt: crate::boxes::cm_to_pt(requested_width_cm),
-            requested_height_pt: crate::boxes::cm_to_pt(requested_height_cm),
+            requested_width_mm,
+            requested_height_mm,
+            requested_width_pt: crate::boxes::mm_to_pt(requested_width_mm),
+            requested_height_pt: crate::boxes::mm_to_pt(requested_height_mm),
             page_count: 0,
             pages: Vec::new(),
             resolution_origin: String::from(
                 "72 (convention PDF, 1 pt = 1/72 in), origine: norme PDF",
             ),
             color_note: String::from(
-                "Aucune transformation de contenu: les ressources couleur, CMJN et profils ICC sont conservees.",
+                "Le contenu source est preserve et rebase par transformation matricielle; les ressources couleur, CMJN et profils ICC sont conservees.",
             ),
             pdfx_note: String::from(
                 "Validation PDF/X-4 non evaluee dans cette incrementation; conservation structurelle.",
@@ -77,16 +77,16 @@ impl fmt::Display for CropReport {
         writeln!(f, "Operation : recadrage central")?;
         writeln!(
             f,
-            "Dimensions demandees : {:.2} cm x {:.2} cm ({} x {} pt)",
-            self.requested_width_cm,
-            self.requested_height_cm,
+            "Dimensions demandees : {:.2} mm x {:.2} mm ({} x {} pt)",
+            self.requested_width_mm,
+            self.requested_height_mm,
             fmt_pt(self.requested_width_pt),
             fmt_pt(self.requested_height_pt)
         )?;
         writeln!(
             f,
-            "Dimensions effectives : {:.2} cm x {:.2} cm",
-            self.requested_width_cm, self.requested_height_cm
+            "Dimensions effectives : {:.2} mm x {:.2} mm",
+            self.requested_width_mm, self.requested_height_mm
         )?;
         writeln!(f, "Resolution utilisee : {}", self.resolution_origin)?;
         writeln!(f, "Nombre de pages : {}", self.page_count)?;
@@ -116,7 +116,7 @@ impl fmt::Display for CropReport {
         }
         writeln!(
             f,
-            "Boites lues/modifiees : MediaBox et CropBox (TrimBox/BleedBox si presents)."
+            "Boites lues/modifiees : MediaBox, CropBox, TrimBox, BleedBox et ArtBox si presents, avec rebase de l'origine en 0,0."
         )?;
         writeln!(f, "Profils ICC : conserves (aucune re-encodage).")?;
         writeln!(f, "Couleur : {}", self.color_note)?;
@@ -166,7 +166,7 @@ fn fmt_pt(value: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boxes::{Rect, cm_to_pt};
+    use crate::boxes::{Rect, mm_to_pt};
 
     #[test]
     fn report_renders_source_and_output() {
@@ -182,8 +182,8 @@ mod tests {
             Rect {
                 llx: 10.0,
                 lly: 20.0,
-                urx: 10.0 + cm_to_pt(10.0),
-                ury: 20.0 + cm_to_pt(15.0),
+                urx: 10.0 + mm_to_pt(10.0),
+                ury: 20.0 + mm_to_pt(15.0),
             },
         );
         report.finalize();

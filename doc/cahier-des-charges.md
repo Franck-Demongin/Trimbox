@@ -86,7 +86,7 @@ s'appuyer sur :
 - RF-014 : La sortie conserve uniquement la portion demandée, provenant directement de la source.
 - RF-015 : Aucun trait de coupe, repère, marge ni élément décoratif n'est ajouté.
 - RF-016 : La sortie doit avoir les dimensions exactes demandées, exprimées en points PDF.
-- RF-017 : Dimensions en points : conversion des centimètres selon une règle de précision cohérente.
+- RF-017 : Dimensions en points : conversion des millimètres selon une règle de précision cohérente.
 - RF-018 : La résolution source est utilisée quand elle est lisible.
 - RF-019 : À défaut de résolution source lisible, la résolution de repli est 300 DPI.
 - RF-020 : Toutes les pages d'un document source multipage sont traitées avec la même géométrie de recadrage.
@@ -105,7 +105,7 @@ s'appuyer sur :
 
 - RF-040 : Trimbox doit lire `MediaBox`, `TrimBox`, `BleedBox`, `CropBox` et `ArtBox` quand elles sont présentes.
 - RF-041 : Trimbox doit valider la cohérence des boîtes relativement à `MediaBox`.
-- RF-042 : Trimbox doit rapporter les valeurs des boîtes dans des unités lisibles, notamment les points et centimètres.
+- RF-042 : Trimbox doit rapporter les valeurs des boîtes dans des unités lisibles, notamment les points et millimètres.
 - RF-043 : La première version se concentre sur la lecture et la validation ; l'édition manuelle des boîtes n'est pas obligatoire.
 - RF-044 : Si une normalisation PDF/X-4 modifie les boîtes, les changements sont consignés dans le rapport.
 
@@ -149,7 +149,7 @@ s'appuyer sur :
 Les tests automatiques doivent couvrir :
 
 - Le chargement et la sauvegarde d'un document PDF vide ou invalide.
-- La conversion exacte des centimètres en points PDF.
+- La conversion exacte des millimètres en points PDF.
 - Le recadrage central avec une source de résolutions connues.
 - Le repli à 300 DPI quand la résolution source est illisible.
 - La préservation des couleurs CMJN et du profil ICC.

@@ -8,7 +8,7 @@ pub mod report;
 pub mod source_characteristics;
 pub mod validation;
 
-pub use boxes::{PageBoxes, Rect, cm_to_pt, pt_to_cm, read_page_boxes};
+pub use boxes::{PageBoxes, Rect, mm_to_pt, pt_to_mm, read_page_boxes};
 pub use crop::crop_document;
 pub use error::Error;
 pub use normalize::{PdfXNormalizationReport, normalize_pdf_x4};

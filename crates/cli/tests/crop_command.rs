@@ -67,8 +67,8 @@ fn crop_command_creates_output() {
     let doc = pdf::load_document(&bytes).expect("load output");
     let boxes = read_page_boxes(&doc).expect("boxes");
     let media = boxes[0].media.expect("media");
-    let expected_w = trimbox_core::cm_to_pt(10.0);
-    let expected_h = trimbox_core::cm_to_pt(15.0);
+    let expected_w = trimbox_core::mm_to_pt(10.0);
+    let expected_h = trimbox_core::mm_to_pt(15.0);
     assert!((media.width() - expected_w).abs() < 0.5);
     assert!((media.height() - expected_h).abs() < 0.5);
 }

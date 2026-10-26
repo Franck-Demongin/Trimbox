@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 
 use crate::error::Error;
 
-/// Facteur de conversion canonique : 1 pouce = 2,54 cm = 72 points PDF.
-pub const CM_TO_PT: f64 = 72.0 / 2.54;
+/// Facteur de conversion canonique : 1 pouce = 25,4 mm = 72 points PDF.
+pub const MM_TO_PT: f64 = 72.0 / 25.4;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rect {
@@ -55,12 +55,12 @@ pub struct PageBoxes {
     pub art: Option<Rect>,
 }
 
-pub fn cm_to_pt(cm: f64) -> f64 {
-    cm * CM_TO_PT
+pub fn mm_to_pt(mm: f64) -> f64 {
+    mm * MM_TO_PT
 }
 
-pub fn pt_to_cm(pt: f64) -> f64 {
-    pt / CM_TO_PT
+pub fn pt_to_mm(pt: f64) -> f64 {
+    pt / MM_TO_PT
 }
 
 /// Lit les boîtes d'un document PDF, avec héritage via le nœud Pages parent.
@@ -169,9 +169,9 @@ mod tests {
 
     #[test]
     fn conversion_aller_retour() {
-        let pt = cm_to_pt(2.54);
+        let pt = mm_to_pt(25.4);
         assert!((pt - 72.0).abs() < f64::EPSILON);
-        assert!((pt_to_cm(pt) - 2.54).abs() < f64::EPSILON);
+        assert!((pt_to_mm(pt) - 25.4).abs() < f64::EPSILON);
     }
 
     #[test]
