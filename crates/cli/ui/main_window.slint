@@ -1,5 +1,11 @@
 import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, StandardButton, Palette } from "std-widgets.slint";
 
+struct SnackbarItem {
+    text: string,
+    level: int,
+    id: int,
+}
+
 global Theme {
     out property <length> spacing: 8px;
     out property <length> window-preferred-width: 860px;
@@ -85,9 +91,7 @@ export component MainWindow inherits Window {
     in property <string> report: "";
     in property <bool> output-available: false;
     in property <bool> report-available: false;
-    in property <string> snackbar-text: "";
-    in property <int> snackbar-level: 0;
-    in property <bool> snackbar-visible: false;
+    in-out property <[SnackbarItem]> snackbar-items: [];
 
     in-out property <bool> report-visible: false;
 
@@ -100,7 +104,7 @@ export component MainWindow inherits Window {
     callback open-report();
     callback close-report();
 
-    callback close-snackbar();
+    callback close-snackbar(int);
 
     open-report => {
         report_popup.show();
@@ -200,19 +204,19 @@ export component MainWindow inherits Window {
     }
 
     Rectangle {
-        visible: root.snackbar-visible;
+        visible: root.snackbar-items.length > 0;
         width: min(460px, root.width - Theme.spacing * 2);
         height: self.preferred-height;
         x: max(Theme.spacing, (root.width - self.width) / 2);
         y: root.height - self.height - Theme.spacing;
         background: transparent;
 
-        Snackbar {
-            width: parent.width;
-            text: root.snackbar-text;
-            level: root.snackbar-level;
-            close-requested => {
-                root.close-snackbar();
+        VerticalBox {
+            spacing: Theme.spacing;
+            for item in root.snackbar-items : Snackbar {
+                text: item.text;
+                level: item.level;
+                close-requested => { root.close-snackbar(item.id); }
             }
         }
     }
