@@ -163,8 +163,8 @@ export component MainWindow inherits Window {
             report_dialog := Dialog {
                 x: (root.width - self.width) / 2;
                 y: (root.height - self.height) / 2;
-                width: 760px;
-                height: 500px;
+                width: root.width >= 760px ? 760px : root.width;
+                height: root.height >= 520px ? 500px : root.height - 20px;
                 title: root.report-title;
 
                 VerticalBox {
