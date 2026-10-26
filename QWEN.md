@@ -94,6 +94,8 @@ Aucune capture n'est actuellement versionnée. Ajoutez les captures disponibles 
   3. `slint_docs_get_page` pour les détails de syntaxe ou les exemples ;
   4. `slint_docs_list` si le terme exact est inconnu.
 - Serveur : `/home/franck/Dev/MCP/slint_docs_mcp`, lancé avec `uv --directory ... python -m slint_docs_mcp --transport stdio`.
+- Documentation Material : une seconde instance MCP `slint-docs-material` utilise la même source, mais `SLINT_DOCS_SOURCE_PATH=ui-libraries/material/docs/src/content/docs`, un index SQLite distinct (`.local/slint-docs-material-index.sqlite3`) et `SLINT_DOCS_PUBLIC_BASE_URL=https://material.slint.dev`. L'agent `slint-ui` a accès à ses tools `mcp__slint-docs-material__*`.
+- Utiliser `slint-docs` pour la documentation Slint principale et `slint-docs-material` pour les composants Material ; `https://material.slint.dev` reste le repli si le chemin attendu est absent.
 - Version Slint documentée : celle de `Cargo.lock` (1.18.1), donc `SLINT_DOCS_VERSION=1`. Ne pas intégrer d'API absente de cette version.
 - Vérifier `page_url` en croisant avec la documentation publiée.
 - Conserver les règles Slint existantes et exécuter les tests après modification.
