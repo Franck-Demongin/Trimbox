@@ -139,7 +139,7 @@ export component MainWindow inherits Window {
                 alignment: stretch;
                 vertical-stretch: 0;
                 LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré"; horizontal-stretch: 1; }
-                Button { text: "Choisir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
+                Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
             }
         }
 
