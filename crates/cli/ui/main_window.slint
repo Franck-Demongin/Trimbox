@@ -96,13 +96,14 @@ export component MainWindow inherits Window {
     VerticalBox {
         spacing: Theme.spacing;
         padding: Theme.spacing;
-        alignment: start;
+        alignment: stretch;
 
         Text {
             text: "Trimbox";
             font-size: 20px;
             font-weight: 600;
             horizontal-alignment: center;
+            vertical-stretch: 0;
         }
 
         Rectangle {
@@ -111,6 +112,7 @@ export component MainWindow inherits Window {
             border-width: 1px;
             border-radius: 6px;
             horizontal-stretch: 1;
+            vertical-stretch: 0;
 
             Text {
                 text: root.status;
@@ -123,6 +125,7 @@ export component MainWindow inherits Window {
         HorizontalBox {
             spacing: Theme.spacing;
             alignment: stretch;
+            vertical-stretch: 0;
             Text { text: "Source"; min-width: 72px; vertical-alignment: center; }
             LineEdit { text <=> root.source-path; placeholder-text: "Chemin du PDF source"; horizontal-stretch: 1; }
             Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-source(); } }
@@ -131,6 +134,7 @@ export component MainWindow inherits Window {
         HorizontalBox {
             spacing: Theme.spacing;
             alignment: stretch;
+            vertical-stretch: 0;
             Text { text: "Sortie"; min-width: 72px; vertical-alignment: center; }
             LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré"; horizontal-stretch: 1; }
             Button { text: "Choisir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
@@ -138,6 +142,7 @@ export component MainWindow inherits Window {
 
         HorizontalBox {
             spacing: Theme.spacing;
+            vertical-stretch: 0;
             Text { text: "Largeur crop (mm)"; vertical-alignment: center; }
             LineEdit { text <=> root.crop-width-mm; placeholder-text: "85"; horizontal-stretch: 1; min-width: 120px; }
             Text { text: "Hauteur crop (mm)"; vertical-alignment: center; }
@@ -152,6 +157,7 @@ export component MainWindow inherits Window {
         HorizontalBox {
             spacing: Theme.spacing;
             alignment: end;
+            vertical-stretch: 0;
 
             if root.report-available : Button {
                 text: "Rapport";
