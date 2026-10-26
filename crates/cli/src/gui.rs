@@ -2,9 +2,13 @@
 
 use anyhow::{Context, Result};
 use slint::ComponentHandle;
+use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::rc::Rc;
+use std::time::Duration;
 
 use trimbox_core::crop::crop_document;
 use trimbox_core::pdf::{load_document, save_document};
@@ -20,7 +24,18 @@ pub fn run() -> Result<()> {
 
     let weak = ui.as_weak();
 
+    let snackbar_state = Rc::new(RefCell::new(SnackbarQueue::default()));
+
+    let close_snackbar_weak = weak.clone();
+    let close_snackbar_state = snackbar_state.clone();
+    ui.on_close_snackbar(move || {
+        if let Some(ui) = close_snackbar_weak.upgrade() {
+            dismiss_snackbar(&ui, &close_snackbar_state);
+        }
+    });
+
     let browse_source_weak = weak.clone();
+    let browse_snackbar_state = snackbar_state.clone();
     ui.on_browse_source(move || {
         if let Some(ui) = browse_source_weak.upgrade() {
             let dialog = rfd::FileDialog::new()
@@ -33,7 +48,7 @@ pub fn run() -> Result<()> {
                 ui.set_output_path(output.display().to_string().into());
                 ui.set_output_available(false);
                 ui.set_report_available(false);
-                set_status(&ui, "Source chargée.".to_owned(), 0);
+                set_status(&ui, &browse_snackbar_state, "Source chargée.".to_owned(), 0);
             }
         }
     });
@@ -52,23 +67,26 @@ pub fn run() -> Result<()> {
     });
 
     let crop_weak = weak.clone();
+    let crop_snackbar_state = snackbar_state.clone();
     ui.on_crop(move || {
         if let Some(ui) = crop_weak.upgrade() {
-            crop_document_gui(&ui);
+            crop_document_gui(&ui, &crop_snackbar_state);
         }
     });
 
     let open_weak = weak.clone();
+    let open_snackbar_state = snackbar_state.clone();
     ui.on_open_output(move || {
         if let Some(ui) = open_weak.upgrade() {
-            open_output_gui(&ui, false);
+            open_output_gui(&ui, false, &open_snackbar_state);
         }
     });
 
     let open_folder_weak = weak.clone();
+    let open_folder_snackbar_state = snackbar_state.clone();
     ui.on_open_output_folder(move || {
         if let Some(ui) = open_folder_weak.upgrade() {
-            open_output_gui(&ui, true);
+            open_output_gui(&ui, true, &open_folder_snackbar_state);
         }
     });
 
@@ -77,26 +95,32 @@ pub fn run() -> Result<()> {
     Ok(())
 }
 
-fn crop_document_gui(ui: &MainWindow) {
+fn crop_document_gui(ui: &MainWindow, snackbar_state: &Rc<RefCell<SnackbarQueue>>) {
+    let state = snackbar_state;
     ui.set_output_available(false);
     ui.set_report_available(false);
 
     let input = source_path(ui);
     if input.is_empty() {
-        set_status(ui, "Choisir d'abord un fichier source.".to_owned(), 2);
+        set_status(
+            ui,
+            state,
+            "Choisir d'abord un fichier source.".to_owned(),
+            2,
+        );
         return;
     }
     let width = match ui.get_crop_width_mm().as_str().trim().parse::<f64>() {
         Ok(value) if value.is_finite() && value > 0.0 => value,
         _ => {
-            set_status(ui, "Largeur de recadrage invalide.".to_owned(), 2);
+            set_status(ui, state, "Largeur de recadrage invalide.".to_owned(), 2);
             return;
         }
     };
     let height = match ui.get_crop_height_mm().as_str().trim().parse::<f64>() {
         Ok(value) if value.is_finite() && value > 0.0 => value,
         _ => {
-            set_status(ui, "Hauteur de recadrage invalide.".to_owned(), 2);
+            set_status(ui, state, "Hauteur de recadrage invalide.".to_owned(), 2);
             return;
         }
     };
@@ -121,6 +145,7 @@ fn crop_document_gui(ui: &MainWindow) {
     if same_path(&input_path, &output) {
         set_status(
             ui,
+            state,
             "Le fichier de sortie doit differer du fichier source.".to_owned(),
             2,
         );
@@ -132,14 +157,14 @@ fn crop_document_gui(ui: &MainWindow) {
     {
         Ok(bytes) => bytes,
         Err(error) => {
-            set_status(ui, error.to_string(), 2);
+            set_status(ui, state, error.to_string(), 2);
             return;
         }
     };
     let mut document = match load_document(&bytes) {
         Ok(document) => document,
         Err(error) => {
-            set_status(ui, format!("PDF illisible : {error}"), 2);
+            set_status(ui, state, format!("PDF illisible : {error}"), 2);
             return;
         }
     };
@@ -161,6 +186,7 @@ fn crop_document_gui(ui: &MainWindow) {
                 format!("Recadrage impossible : {error}"),
                 "Recadrage impossible.".to_owned(),
                 2,
+                state,
             );
             return;
         }
@@ -169,13 +195,13 @@ fn crop_document_gui(ui: &MainWindow) {
     let saved_bytes = match save_document(&mut document) {
         Ok(bytes) => bytes,
         Err(error) => {
-            set_status(ui, format!("Serialisation impossible : {error}"), 2);
+            set_status(ui, state, format!("Serialisation impossible : {error}"), 2);
             return;
         }
     };
 
     if let Err(error) = fs::write(&output, saved_bytes) {
-        set_status(ui, format!("Ecriture impossible : {error}"), 2);
+        set_status(ui, state, format!("Ecriture impossible : {error}"), 2);
         return;
     }
 
@@ -198,6 +224,7 @@ fn crop_document_gui(ui: &MainWindow) {
         format_crop_summary(&report, &validation, output_size),
         status,
         level,
+        state,
     );
 }
 
@@ -432,17 +459,23 @@ fn set_report(
     report: String,
     status: impl Into<slint::SharedString>,
     level: i32,
+    snackbar_state: &Rc<RefCell<SnackbarQueue>>,
 ) {
+    let state = snackbar_state;
     ui.set_report_title(title.into());
     let report = format_report_body("report", &report);
     ui.set_report(report.into());
     ui.set_report_available(true);
-    set_status(ui, status, level);
+    set_status(ui, state, status, level);
 }
 
-fn set_status(ui: &MainWindow, status: impl Into<slint::SharedString>, level: i32) {
-    ui.set_status(status.into());
-    ui.set_status_level(level);
+fn set_status(
+    ui: &MainWindow,
+    state: &Rc<RefCell<SnackbarQueue>>,
+    status: impl Into<slint::SharedString>,
+    level: i32,
+) {
+    enqueue_snackbar(ui, state, status.into().as_str().to_owned(), level);
 }
 
 fn source_path(ui: &MainWindow) -> String {
@@ -473,10 +506,11 @@ fn same_path(left: &Path, right: &Path) -> bool {
     }
 }
 
-fn open_output_gui(ui: &MainWindow, folder: bool) {
+fn open_output_gui(ui: &MainWindow, folder: bool, snackbar_state: &Rc<RefCell<SnackbarQueue>>) {
+    let state = snackbar_state;
     let path = output_path(ui);
     if path.is_empty() {
-        set_status(ui, "Aucun fichier généré disponible.".to_owned(), 2);
+        set_status(ui, state, "Aucun fichier généré disponible.".to_owned(), 2);
         return;
     }
     let path = PathBuf::from(path);
@@ -490,6 +524,7 @@ fn open_output_gui(ui: &MainWindow, folder: bool) {
     match open_system_path(&target) {
         Ok(()) => set_status(
             ui,
+            state,
             if folder {
                 "Dossier ouvert.".to_owned()
             } else {
@@ -497,7 +532,7 @@ fn open_output_gui(ui: &MainWindow, folder: bool) {
             },
             0,
         ),
-        Err(error) => set_status(ui, format!("Ouverture impossible : {error}"), 2),
+        Err(error) => set_status(ui, state, format!("Ouverture impossible : {error}"), 2),
     }
 }
 
@@ -568,6 +603,111 @@ fn format_pt(value: f64) -> String {
     } else {
         format!("{:.2}", value)
     }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct SnackbarNotice {
+    text: String,
+    level: i32,
+}
+
+#[derive(Default)]
+struct SnackbarQueue {
+    pending: VecDeque<SnackbarNotice>,
+    active: Option<SnackbarNotice>,
+    generation: u64,
+    active_generation: Option<u64>,
+}
+
+impl SnackbarQueue {
+    fn next_generation(&mut self) -> u64 {
+        self.generation = self.generation.wrapping_add(1);
+        self.active_generation = Some(self.generation);
+        self.generation
+    }
+
+    fn clear_generation(&mut self) {
+        self.active_generation = None;
+    }
+}
+impl SnackbarQueue {
+    fn enqueue(&mut self, notice: SnackbarNotice) -> bool {
+        let was_idle = self.active.is_none();
+        self.pending.push_back(notice);
+        was_idle
+    }
+
+    fn take_next(&mut self) -> Option<SnackbarNotice> {
+        let next = self.pending.pop_front();
+        self.active = next.clone();
+        next
+    }
+
+    fn dismiss(&mut self) -> Option<SnackbarNotice> {
+        self.active.as_ref()?;
+        self.active = None;
+        let next = self.pending.pop_front();
+        self.active = next.clone();
+        next
+    }
+}
+
+fn enqueue_snackbar(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>, text: String, level: i32) {
+    let notice = SnackbarNotice { text, level };
+    let was_idle = state.borrow_mut().enqueue(notice);
+    if was_idle {
+        show_next_snackbar(ui, state);
+    }
+}
+
+fn show_next_snackbar(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>) {
+    let notice = state.borrow_mut().take_next();
+    match notice {
+        Some(notice) => {
+            let generation = state.borrow_mut().next_generation();
+            ui.set_snackbar_text(notice.text.into());
+            ui.set_snackbar_level(notice.level);
+            ui.set_snackbar_visible(true);
+            schedule_auto_dismiss(ui.as_weak(), state.clone(), generation);
+        }
+        None => {
+            state.borrow_mut().clear_generation();
+            ui.set_snackbar_visible(false);
+        }
+    }
+}
+
+fn dismiss_snackbar(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>) {
+    let next = state.borrow_mut().dismiss();
+    match next {
+        Some(notice) => {
+            let generation = state.borrow_mut().next_generation();
+            ui.set_snackbar_text(notice.text.into());
+            ui.set_snackbar_level(notice.level);
+            ui.set_snackbar_visible(true);
+            schedule_auto_dismiss(ui.as_weak(), state.clone(), generation);
+        }
+        None => {
+            state.borrow_mut().clear_generation();
+            ui.set_snackbar_visible(false);
+        }
+    }
+}
+
+fn schedule_auto_dismiss(
+    ui: slint::Weak<MainWindow>,
+    state: Rc<RefCell<SnackbarQueue>>,
+    generation: u64,
+) {
+    slint::Timer::single_shot(Duration::from_secs(4), move || {
+        if let Some(ui) = ui.upgrade() {
+            let still_active = state.borrow().active_generation == Some(generation);
+            if !still_active {
+                return;
+            }
+            dismiss_snackbar(&ui, &state);
+        }
+    });
 }
 
 #[cfg(test)]
@@ -708,5 +848,57 @@ mod report_format_tests {
             format_crop_summary(&report, &validation, size),
             format_crop_result(&report, &validation, size)
         );
+    }
+}
+
+#[cfg(test)]
+mod snackbar_queue_tests {
+    use super::{SnackbarNotice, SnackbarQueue};
+
+    #[test]
+    fn queue_stores_notice_and_reports_idle() {
+        let mut queue = SnackbarQueue::default();
+        assert!(queue.enqueue(SnackbarNotice {
+            text: "alpha".to_owned(),
+            level: 0,
+        }));
+        assert_eq!(queue.pending.len(), 1);
+        assert!(queue.active.is_none());
+    }
+
+    #[test]
+    fn take_next_activates_notice() {
+        let mut queue = SnackbarQueue::default();
+        queue.enqueue(SnackbarNotice {
+            text: "alpha".to_owned(),
+            level: 1,
+        });
+        let notice = queue.take_next().unwrap();
+        assert_eq!(notice.text, "alpha");
+        assert_eq!(queue.active.as_ref().unwrap().text, "alpha");
+        assert!(queue.pending.is_empty());
+    }
+
+    #[test]
+    fn dismiss_returns_next_notice() {
+        let mut queue = SnackbarQueue::default();
+        queue.enqueue(SnackbarNotice {
+            text: "first".to_owned(),
+            level: 0,
+        });
+        queue.enqueue(SnackbarNotice {
+            text: "second".to_owned(),
+            level: 2,
+        });
+        queue.take_next();
+        let next = queue.dismiss().unwrap();
+        assert_eq!(next.text, "second");
+        assert_eq!(queue.active.as_ref().unwrap().text, "second");
+    }
+
+    #[test]
+    fn dismiss_on_idle_returns_none() {
+        let mut queue = SnackbarQueue::default();
+        assert!(queue.dismiss().is_none());
     }
 }
