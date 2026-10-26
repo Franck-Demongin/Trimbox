@@ -26,6 +26,14 @@ pub fn run() -> Result<()> {
                     boxes.page, boxes.media, boxes.crop, boxes.trim, boxes.bleed, boxes.art
                 );
             }
+            let source = trimbox_core::analyze_source(&document);
+            println!("Couleur source : {}", source.color.mode().label());
+            println!(
+                "Profils ICC source : {} (sorties : {})",
+                source.color.icc_profile_count(),
+                source.color.output_intent_profile_count
+            );
+            println!("Metadonnees source : {}", source.metadata_note());
             Ok(())
         }
         Some(Command::Pdf {

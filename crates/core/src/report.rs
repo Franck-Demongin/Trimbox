@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::boxes::Rect;
+use crate::source_characteristics::SourceCharacteristics;
 
 #[derive(Debug, Clone)]
 pub struct PageCropChange {
@@ -22,6 +23,7 @@ pub struct CropReport {
     pub resolution_origin: String,
     pub color_note: String,
     pub pdfx_note: String,
+    pub source_characteristics: SourceCharacteristics,
 }
 
 impl CropReport {
@@ -49,6 +51,7 @@ impl CropReport {
             pdfx_note: String::from(
                 "Validation PDF/X-4 non evaluee dans cette incrementation; conservation structurelle.",
             ),
+            source_characteristics: SourceCharacteristics::default(),
         }
     }
 
@@ -118,6 +121,31 @@ impl fmt::Display for CropReport {
         writeln!(f, "Profils ICC : conserves (aucune re-encodage).")?;
         writeln!(f, "Couleur : {}", self.color_note)?;
         writeln!(f, "PDF/X-4 : {}", self.pdfx_note)?;
+        writeln!(
+            f,
+            "Couleur source : {}",
+            self.source_characteristics.color_note()
+        )?;
+        writeln!(
+            f,
+            "ICC source (CMJN/RVB/gris) : {}/{}/{} ; profils detectes : {}",
+            self.source_characteristics.color.cmyk_present,
+            self.source_characteristics.color.rgb_present,
+            self.source_characteristics.color.gray_present,
+            self.source_characteristics.color.icc_profile_count()
+        )?;
+        writeln!(
+            f,
+            "Profils sorties : {}",
+            self.source_characteristics
+                .color
+                .output_intent_profile_count
+        )?;
+        writeln!(
+            f,
+            "Metadonnees : {}",
+            self.source_characteristics.metadata_note()
+        )?;
         writeln!(
             f,
             "Comportement de repli : aucun applicable au recadrage geometrique."

@@ -1,4 +1,5 @@
 use crate::boxes::{Rect, read_page_boxes};
+use crate::source_characteristics::{SourceCharacteristics, analyze_source};
 use lopdf::Document;
 
 const TOL: f64 = 0.5;
@@ -56,6 +57,7 @@ pub struct PdfXValidationReport {
     pub page_count: usize,
     pub output_intent_count: usize,
     pub embedded_icc_count: usize,
+    pub source_characteristics: SourceCharacteristics,
     pub issues: Vec<PdfXIssue>,
 }
 
@@ -67,6 +69,7 @@ impl PdfXValidationReport {
             page_count: document.get_pages().len(),
             output_intent_count: 0,
             embedded_icc_count: 0,
+            source_characteristics: analyze_source(document),
             issues: Vec::new(),
         }
     }
@@ -411,6 +414,21 @@ impl std::fmt::Display for PdfXValidationReport {
         writeln!(f, "Pages : {}", self.page_count)?;
         writeln!(f, "OutputIntents : {}", self.output_intent_count)?;
         writeln!(f, "Profils ICC embarques : {}", self.embedded_icc_count)?;
+        writeln!(
+            f,
+            "Couleur source : {}",
+            self.source_characteristics.color_note()
+        )?;
+        writeln!(
+            f,
+            "Profils couleur source : {}",
+            self.source_characteristics.color.icc_profile_count()
+        )?;
+        writeln!(
+            f,
+            "Metadonnees source : {}",
+            self.source_characteristics.metadata_note()
+        )?;
         writeln!(
             f,
             "Conforme PDF/X-4 : {}",

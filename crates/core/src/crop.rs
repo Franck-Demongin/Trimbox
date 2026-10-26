@@ -3,6 +3,7 @@ use lopdf::Document;
 use crate::boxes::{self, Rect};
 use crate::error::Error;
 use crate::report::CropReport;
+use crate::source_characteristics::analyze_source;
 
 pub fn crop_document(
     document: &mut Document,
@@ -26,6 +27,8 @@ pub fn crop_document(
     let requested_height_pt = boxes::cm_to_pt(height_cm);
 
     let mut report = CropReport::new(source, output, width_cm, height_cm);
+    report.source_characteristics = analyze_source(document);
+    report.color_note = report.source_characteristics.color_note();
     let pages = document.get_pages();
     let mut ordered: Vec<(u32, lopdf::ObjectId)> = pages.into_iter().collect();
     ordered.sort_by_key(|(number, _)| *number);
