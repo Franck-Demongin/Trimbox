@@ -80,8 +80,8 @@ s'appuyer sur :
 ### Commande de recadrage
 
 - RF-010 : Trimbox doit proposer une opération de recadrage (crop) central.
-- RF-011 : L'utilisateur indique une largeur finale en centimètres.
-- RF-012 : L'utilisateur indique une hauteur finale en centimètres.
+- RF-011 : L'utilisateur indique une largeur finale en millimètres.
+- RF-012 : L'utilisateur indique une hauteur finale en millimètres.
 - RF-013 : L'opération recadre le contenu depuis son centre, sans déformation ni mise à l'échelle.
 - RF-014 : La sortie conserve uniquement la portion demandée, provenant directement de la source.
 - RF-015 : Aucun trait de coupe, repère, marge ni élément décoratif n'est ajouté.
