@@ -147,16 +147,28 @@ export component MainWindow inherits Window {
             }
         }
 
-        VerticalBox {
-            spacing: Theme.spacing;
+        Rectangle {
+            background: Palette.alternate-background;
+            border-color: Palette.border;
+            border-width: 1px;
+            border-radius: Theme.corner-radius;
             vertical-stretch: 0;
-            Text { text: "Sortie"; vertical-alignment: center; }
-            HorizontalBox {
+            horizontal-stretch: 1;
+            height: self.preferred-height;
+
+            VerticalBox {
+                padding: Theme.spacing;
                 spacing: Theme.spacing;
-                alignment: stretch;
                 vertical-stretch: 0;
-                LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré"; horizontal-stretch: 1; }
-                Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
+
+                Text { text: "Sortie"; vertical-alignment: center; }
+                HorizontalBox {
+                    spacing: Theme.spacing;
+                    alignment: stretch;
+                    vertical-stretch: 0;
+                    LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré"; horizontal-stretch: 1; }
+                    Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
+                }
             }
         }
 
