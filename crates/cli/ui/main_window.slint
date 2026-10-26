@@ -143,13 +143,21 @@ export component MainWindow inherits Window {
             }
         }
 
-        HorizontalBox {
+        VerticalBox {
             spacing: Theme.spacing;
             vertical-stretch: 0;
-            Text { text: "Largeur crop (mm)"; vertical-alignment: center; }
-            LineEdit { text <=> root.crop-width-mm; placeholder-text: "85"; horizontal-stretch: 1; min-width: Theme.crop-field-min-width; }
-            Text { text: "Hauteur crop (mm)"; vertical-alignment: center; }
-            LineEdit { text <=> root.crop-height-mm; placeholder-text: "55"; horizontal-stretch: 1; min-width: Theme.crop-field-min-width; }
+            HorizontalBox {
+                spacing: Theme.spacing;
+                vertical-stretch: 0;
+                Text { text: "Largeur crop (mm)"; vertical-alignment: center; }
+                Text { text: "Hauteur crop (mm)"; vertical-alignment: center; }
+            }
+            HorizontalBox {
+                spacing: Theme.spacing;
+                vertical-stretch: 0;
+                LineEdit { text <=> root.crop-width-mm; placeholder-text: "85"; horizontal-stretch: 1; min-width: Theme.crop-field-min-width; }
+                LineEdit { text <=> root.crop-height-mm; placeholder-text: "55"; horizontal-stretch: 1; min-width: Theme.crop-field-min-width; }
+            }
         }
 
         Rectangle {
