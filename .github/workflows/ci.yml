@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1 # v7.0.1
+
+      - name: Install Slint Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          PACKAGES=(build-essential pkg-config libx11-dev libxkbcommon-dev libwayland-dev)
+          if apt-cache show libfontconfig-dev >/dev/null 2>&1; then PACKAGES+=(libfontconfig-dev); else PACKAGES+=(libfontconfig1-dev); fi
+          if apt-cache show libfreetype-dev >/dev/null 2>&1; then PACKAGES+=(libfreetype-dev); else PACKAGES+=(libfreetype6-dev); fi
+          if apt-cache show libgl-dev >/dev/null 2>&1; then PACKAGES+=(libgl-dev); else PACKAGES+=(libgl1-mesa-dev); fi
+          sudo apt-get install -y "${PACKAGES[@]}"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1 # latest stable channel, action major tag v1
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2.9.3 # v2.9.3
+        with:
+          key: ${{ runner.os }}-cargo
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+      - name: Build
+        run: cargo build --workspace --all-features --locked
+
+      - name: Tests
+        run: cargo test --workspace --all-features --locked

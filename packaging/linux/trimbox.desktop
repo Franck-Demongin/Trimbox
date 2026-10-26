@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Trimbox
+Comment=Lire et préparer des documents PDF pour PDF/X-4
+Exec=trimbox gui
+Icon=trimbox
+Terminal=false
+Categories=Office;
+StartupNotify=true
+StartupWMClass=io.github.Franck-Demongin.Trimbox

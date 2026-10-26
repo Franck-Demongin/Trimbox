@@ -1,0 +1,28 @@
+[package]
+name = "trimbox-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Interface en ligne de commande et interface graphique optionnelle pour Trimbox."
+repository.workspace = true
+
+[[bin]]
+name = "trimbox"
+path = "src/main.rs"
+
+[features]
+default = []
+gui = ["dep:slint", "dep:slint-build"]
+
+[dependencies]
+trimbox-core.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+slint = { workspace = true, optional = true }
+
+[build-dependencies]
+slint-build = { workspace = true, optional = true }

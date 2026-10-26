@@ -1,0 +1,15 @@
+[package]
+name = "trimbox-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Coeur metier pour la lecture et la generation de PDFs conformes PDF/X-4."
+repository.workspace = true
+
+[dependencies]
+lopdf.workspace = true
+thiserror.workspace = true
+directories.workspace = true
+tracing.workspace = true
