@@ -5083,6 +5083,8 @@ dependencies = [
  "clap",
  "lopdf",
  "rfd",
+ "serde",
+ "serde_json",
  "slint",
  "slint-build",
  "tempfile",

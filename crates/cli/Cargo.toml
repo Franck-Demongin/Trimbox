@@ -14,7 +14,7 @@ path = "src/main.rs"
 
 [features]
 default = []
-gui = ["dep:slint", "dep:slint-build", "dep:rfd", "dep:lopdf"]
+gui = ["dep:slint", "dep:slint-build", "dep:rfd", "dep:lopdf", "dep:serde", "dep:serde_json"]
 
 [dependencies]
 trimbox-core.workspace = true
@@ -25,6 +25,8 @@ tracing-subscriber.workspace = true
 slint = { workspace = true, optional = true }
 rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"], optional = true }
 lopdf = { workspace = true, optional = true }
+serde = { version = "1", default-features = true, features = ["derive"], optional = true }
+serde_json = { version = "1", default-features = true, optional = true }
 
 [build-dependencies]
 slint-build = { workspace = true, optional = true }

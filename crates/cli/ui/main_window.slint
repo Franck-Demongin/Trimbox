@@ -15,6 +15,7 @@ export component MainWindow inherits Window {
     in-out property <string> output-path: "";
     in-out property <string> crop-width-mm: "85";
     in-out property <string> crop-height-mm: "55";
+    in property <string> report-title: "Rapport Trimbox";
     in property <string> report: "";
     in property <string> status: "Prêt.";
     in property <int> status-level: 0;
@@ -39,11 +40,60 @@ export component MainWindow inherits Window {
             horizontal-alignment: center;
         }
 
+        Rectangle {
+            background: root.status-level == 2 ? #fdeeee : (root.status-level == 1 ? #fff7e6 : #eef7ee);
+            border-color: root.status-level == 2 ? #c62828 : (root.status-level == 1 ? #f9a825 : #2e7d32);
+            border-width: 1px;
+            border-radius: 6px;
+            horizontal-stretch: 1;
+
+            Text {
+                text: root.status;
+                color: root.status-level == 2 ? #c62828 : (root.status-level == 1 ? #f9a825 : #2e7d32);
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+
         Text {
-            text: root.status;
-            color: root.status-level == 2 ? #c62828 : (root.status-level == 1 ? #f9a825 : #2e7d32);
-            horizontal-alignment: center;
-            wrap: word-wrap;
+            text: root.report-title;
+            font-size: 14px;
+            font-weight: 600;
+            horizontal-alignment: left;
+        }
+
+        Rectangle {
+            background: #f7f7f7;
+            border-color: #9a9a9a;
+            border-width: 1px;
+            border-radius: 6px;
+            horizontal-stretch: 1;
+            vertical-stretch: 1;
+            min-height: 290px;
+            clip: true;
+
+            VerticalBox {
+                padding: 8px;
+
+                ScrollView {
+                    width: 100%;
+                    content-width: self.visible-width;
+                    vertical-stretch: 1;
+                    horizontal-scrollbar-policy: always-off;
+
+                    Text {
+                        text: root.report;
+                        width: 100%;
+                        min-width: 0px;
+                        wrap: word-wrap;
+                        vertical-alignment: top;
+                        horizontal-alignment: left;
+                        font-family: "monospace";
+                        font-size: 12px;
+                        color: #202020;
+                    }
+                }
+            }
         }
 
         HorizontalBox {
@@ -76,17 +126,6 @@ export component MainWindow inherits Window {
             Button { text: "Valider"; enabled: !root.busy; clicked => { root.validate(); } }
             Button { text: "Normaliser"; enabled: !root.busy; clicked => { root.normalize(); } }
             Button { text: "Recadrer"; enabled: !root.busy; clicked => { root.crop(); } }
-        }
-
-        ScrollView {
-            vertical-stretch: 1;
-            min-height: 290px;
-
-            Text {
-                text: root.report;
-                wrap: word-wrap;
-                horizontal-alignment: left;
-            }
         }
     }
 }

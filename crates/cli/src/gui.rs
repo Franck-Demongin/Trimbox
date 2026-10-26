@@ -1,9 +1,9 @@
 #![cfg(feature = "gui")]
-#![allow(unused)]
 
 use anyhow::anyhow;
 use anyhow::{Context, Result};
 use lopdf::Document;
+use serde_json::Value as JsonValue;
 use slint::ComponentHandle;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -18,7 +18,7 @@ pub fn run() -> Result<()> {
     let ui = MainWindow::new()
         .map_err(|error| anyhow::anyhow!("creation de la fenetre impossible : {error}"))?;
 
-    slint::set_xdg_app_id("io.github.Franck-Demongin.Trimbox");
+    let _ = slint::set_xdg_app_id("io.github.Franck-Demongin.Trimbox");
 
     let weak = ui.as_weak();
 
@@ -95,7 +95,13 @@ fn inspect_document(ui: &MainWindow) {
     let document = match load_document_for_inspection(&path, &source) {
         Ok(document) => document,
         Err(message) => {
-            set_report(ui, message.to_string(), "Source non lisible.".to_owned(), 2);
+            set_report(
+                ui,
+                "Analyse de la source",
+                message.to_string(),
+                "Source non lisible.".to_owned(),
+                2,
+            );
             return;
         }
     };
@@ -105,6 +111,7 @@ fn inspect_document(ui: &MainWindow) {
         Err(message) => {
             set_report(
                 ui,
+                "Analyse de la source",
                 format!("Analyse impossible: {message}"),
                 "Analyse échouée.".to_owned(),
                 2,
@@ -112,7 +119,13 @@ fn inspect_document(ui: &MainWindow) {
             return;
         }
     };
-    set_report(ui, document_summary, "Analyse terminée.".to_owned(), 0);
+    set_report(
+        ui,
+        "Analyse de la source",
+        document_summary,
+        "Analyse terminée.".to_owned(),
+        0,
+    );
 }
 
 fn validate_document(ui: &MainWindow) {
@@ -143,6 +156,7 @@ fn validate_document(ui: &MainWindow) {
     let level = report.exit_code().clamp(0, 2);
     set_report(
         ui,
+        "Validation PDF/X-4",
         report.to_string(),
         format!("Validation terminée (code {}).", report.exit_code()),
         level,
@@ -215,6 +229,7 @@ fn normalize_document(ui: &MainWindow) {
         ui.set_output_path(output_display.clone().into());
         set_report(
             ui,
+            "Normalisation PDF/X-4",
             report.to_string(),
             format!(
                 "PDF normalisé : {} (code {}).",
@@ -226,6 +241,7 @@ fn normalize_document(ui: &MainWindow) {
     } else {
         set_report(
             ui,
+            "Normalisation PDF/X-4",
             report.to_string(),
             "Normalisation bloquée.".to_owned(),
             2,
@@ -321,6 +337,7 @@ fn crop_document_gui(ui: &MainWindow) {
     ui.set_output_path(output.display().to_string().into());
     set_report(
         ui,
+        "Recadrage PDF/X-4",
         report.to_string(),
         format!(
             "PDF recadré en {width} x {height} mm : {}.",
@@ -330,13 +347,13 @@ fn crop_document_gui(ui: &MainWindow) {
     );
 }
 
-fn load_document_for_inspection(path: &Path, source: &str) -> Result<lopdf::Document> {
+fn load_document_for_inspection(_path: &Path, _source: &str) -> Result<lopdf::Document> {
     let bytes =
-        fs::read(path).with_context(|| format!("lecture impossible: {}", path.display()))?;
+        fs::read(_path).with_context(|| format!("lecture impossible: {}", _path.display()))?;
     load_document(&bytes).map_err(|error| anyhow!(format!("PDF illisible : {error}")))
 }
 
-fn build_source_report(path: &Path, source: &str, document: &Document) -> Result<String> {
+fn build_source_report(_path: &Path, source: &str, document: &Document) -> Result<String> {
     let boxes = read_page_boxes(document)
         .map_err(|error| anyhow!(format!("lecture des boites impossible : {error}")))?;
     let characteristics = analyze_source(document);
@@ -362,9 +379,114 @@ fn build_source_report(path: &Path, source: &str, document: &Document) -> Result
     Ok(lines.join("\n"))
 }
 
-fn set_report(ui: &MainWindow, report: String, status: String, level: i32) {
+fn set_report(
+    ui: &MainWindow,
+    title: impl Into<slint::SharedString>,
+    report: String,
+    status: impl Into<slint::SharedString>,
+    level: i32,
+) {
+    ui.set_report_title(title.into());
+    let report = format_report_body("report", &report);
     ui.set_report(report.into());
     set_status(ui, status, level);
+}
+
+pub fn format_report_body(_kind: &str, raw: &str) -> String {
+    let normalized = normalize_blank_lines(raw);
+    annotate_json_values(&normalized)
+}
+
+pub fn normalize_report_body(raw: &str) -> String {
+    normalize_blank_lines(raw)
+}
+
+pub fn normalize_blank_lines(raw: &str) -> String {
+    let mut output = String::new();
+    let mut previous_blank = false;
+    for line in raw.lines() {
+        let trimmed = line.trim_end();
+        if trimmed.trim().is_empty() {
+            if previous_blank {
+                continue;
+            }
+            output.push('\n');
+            previous_blank = true;
+        } else {
+            previous_blank = false;
+            output.push_str(trimmed);
+            output.push('\n');
+        }
+    }
+    while output.ends_with('\n') && output.len() > 1 {
+        let _ = output.pop();
+    }
+    if output.trim().is_empty() {
+        String::new()
+    } else {
+        output
+    }
+}
+
+pub fn format_json_value(raw: &str) -> String {
+    let trimmed = raw.trim();
+    match serde_json::from_str::<JsonValue>(trimmed) {
+        Ok(value) => serde_json::to_string_pretty(&value).unwrap_or_else(|_| trimmed.to_owned()),
+        Err(_) => trimmed.to_owned(),
+    }
+}
+
+pub fn annotate_json_values(raw: &str) -> String {
+    let mut output = String::new();
+    for line in raw.lines() {
+        output.push_str(&annotate_json_on_line(line));
+        output.push('\n');
+    }
+    if raw.ends_with('\n') || output.is_empty() {
+        output
+    } else if output.ends_with('\n') {
+        output.pop();
+        output
+    } else {
+        output
+    }
+}
+
+pub fn annotate_json_on_line(line: &str) -> String {
+    let start = line.find('{').into_iter().chain(line.find('[')).min();
+    let Some(start) = start else {
+        return line.to_owned();
+    };
+
+    let mut end = None;
+    for index in start + 1..=line.len() {
+        if !line.is_char_boundary(index) {
+            continue;
+        }
+        if serde_json::from_str::<JsonValue>(&line[start..index]).is_ok() {
+            end = Some(index);
+            break;
+        }
+    }
+    let Some(end) = end else {
+        return line.to_owned();
+    };
+
+    let prefix = line[..start].trim_end();
+    let pretty = serde_json::to_string_pretty(
+        &serde_json::from_str::<JsonValue>(&line[start..end]).unwrap(),
+    )
+    .unwrap_or_else(|_| line[start..end].to_owned());
+    let suffix = &line[end..];
+
+    let joined = if prefix.is_empty() {
+        pretty
+    } else if prefix.ends_with(' ') {
+        format!("{prefix}{pretty}")
+    } else {
+        format!("{prefix} {pretty}")
+    };
+    format!("{joined}{suffix}")
 }
 
 fn set_status(ui: &MainWindow, status: impl Into<slint::SharedString>, level: i32) {
@@ -397,5 +519,36 @@ fn same_path(left: &Path, right: &Path) -> bool {
     match (std::fs::canonicalize(left), std::fs::canonicalize(right)) {
         (Ok(a), Ok(b)) => a == b,
         _ => false,
+    }
+}
+
+#[cfg(test)]
+mod report_format_tests {
+    use super::*;
+
+    #[test]
+    fn blank_lines_are_normalized() {
+        assert_eq!(
+            format_report_body("report", "alpha\n\n\nbeta"),
+            "alpha\n\nbeta"
+        );
+    }
+
+    #[test]
+    fn plain_report_text_is_preserved() {
+        assert_eq!(format_report_body("report", "bonjour"), "bonjour");
+    }
+
+    #[test]
+    fn json_values_are_pretty_printed() {
+        assert_eq!(
+            format_json_value(r#"{"b":2,"a":1}"#),
+            "{\n  \"a\": 1,\n  \"b\": 2\n}"
+        );
+    }
+
+    #[test]
+    fn invalid_json_falls_back_to_input() {
+        assert_eq!(format_json_value("not json"), "not json");
     }
 }
