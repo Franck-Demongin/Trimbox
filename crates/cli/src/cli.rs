@@ -26,6 +26,15 @@ pub enum Command {
 
 #[derive(Subcommand, Debug)]
 pub enum PdfCommand {
-    /// Verifie qu'un PDF peut etre lu.
+    /// Affiche les informations et les boites d'un PDF.
     Info { path: PathBuf },
+    /// Recadre un PDF au centre aux dimensions indiquees.
+    Crop {
+        input: PathBuf,
+        output: PathBuf,
+        #[arg(short, long)]
+        width: f64,
+        #[arg(short = 'H', long)]
+        height: f64,
+    },
 }

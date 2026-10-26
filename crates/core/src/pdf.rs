@@ -22,6 +22,11 @@ pub fn blank_pdf_x4() -> Result<Vec<u8>, Error> {
     save_document(&mut document)
 }
 
+/// Nombre de pages du document.
+pub fn page_count(document: &Document) -> usize {
+    document.get_pages().len()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
