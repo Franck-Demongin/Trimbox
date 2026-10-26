@@ -30,6 +30,19 @@ export component MainWindow inherits Window {
     callback open-output();
     callback open-output-folder();
 
+    callback open-report();
+    callback close-report();
+
+    open-report => {
+        report_popup.show();
+        root.report-visible = true;
+    }
+
+    close-report => {
+        report_popup.close();
+        root.report-visible = false;
+    }
+
     VerticalBox {
         spacing: Theme.spacing;
         padding: Theme.spacing;
@@ -106,8 +119,7 @@ export component MainWindow inherits Window {
                 text: "Rapport";
                 horizontal-stretch: 0;
                 clicked => {
-                    root.report-visible = true;
-                    report_popup.show();
+                    root.open-report();
                 }
             }
 
@@ -147,8 +159,7 @@ export component MainWindow inherits Window {
 
             capture-key-pressed(event) => {
                 if root.report-visible && event.text == Key.Escape {
-                    report_popup.close();
-                    root.report-visible = false;
+                    root.close-report();
                     return accept;
                 }
                 reject
@@ -226,8 +237,7 @@ export component MainWindow inherits Window {
                 StandardButton {
                     kind: close;
                     clicked => {
-                        report_popup.close();
-                        root.report-visible = false;
+                        root.close-report();
                     }
                 }
             }
