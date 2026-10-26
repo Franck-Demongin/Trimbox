@@ -98,6 +98,29 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        run: |
+          set -euo pipefail
+          previous_tag="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
+          {
+            echo "## Commits"
+            echo
+            if [ -n "${previous_tag}" ]; then
+              git log "${previous_tag}..HEAD" --pretty=format:'- %s (%h)' | grep -vE '^- chore\(release\)' || true
+            else
+              git log --pretty=format:'- %s (%h)' | grep -vE '^- chore\(release\)' || true
+            fi
+          } > release-notes.md
+          printf '\n' >> release-notes.md
+          echo "Previous tag: ${previous_tag:-<none>}"
+          echo "--- Release notes ---"
+          cat release-notes.md
+
       - name: Download release assets
         uses: actions/download-artifact@v8.0.2 # v8.0.2
         with:
@@ -118,5 +141,6 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Trimbox ${{ github.ref_name }}
+          body_path: release-notes.md
           files: release/*
           fail_on_unmatched_files: true
