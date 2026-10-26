@@ -28,8 +28,8 @@ component Snackbar inherits Rectangle {
 
     callback close-requested();
 
-    background: self.level == 2 ? #fdeeee : (self.level == 1 ? #fff7e6 : #eef7ee);
-    border-color: self.level == 2 ? #c62828 : (self.level == 1 ? #f9a825 : #2e7d32);
+    background: Palette.alternate-background;
+    border-color: Palette.border;
     border-width: 1px;
     border-radius: Theme.corner-radius;
     height: self.preferred-height;
@@ -41,7 +41,7 @@ component Snackbar inherits Rectangle {
 
         Text {
             text: root.text;
-            color: root.level == 2 ? #c62828 : (root.level == 1 ? #f9a825 : #2e7d32);
+            color: Palette.foreground;
             wrap: word-wrap;
             horizontal-alignment: left;
             vertical-alignment: top;
@@ -53,13 +53,13 @@ component Snackbar inherits Rectangle {
             height: 24px;
             horizontal-stretch: 0;
             border-radius: 12px;
-            background: root.level == 2 ? #c62828 : (root.level == 1 ? #f9a825 : #2e7d32);
+            background: Palette.control-background;
 
             Text {
                 width: 24px;
                 height: 24px;
                 text: "×";
-                color: #ffffff;
+                color: Palette.control-foreground;
                 font-size: 18px;
                 font-weight: 700;
                 horizontal-alignment: center;
