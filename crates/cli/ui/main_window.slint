@@ -51,11 +51,17 @@ export component MainWindow inherits Window {
             horizontal-stretch: 1;
             vertical-stretch: 0;
 
-            Text {
-                text: root.status;
-                color: root.status-level == 2 ? #c62828 : (root.status-level == 1 ? #f9a825 : #2e7d32);
-                horizontal-alignment: center;
-                wrap: word-wrap;
+            VerticalBox {
+                padding: Theme.spacing;
+                spacing: 0px;
+                alignment: center;
+
+                Text {
+                    text: root.status;
+                    color: root.status-level == 2 ? #c62828 : (root.status-level == 1 ? #f9a825 : #2e7d32);
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
             }
         }
 
