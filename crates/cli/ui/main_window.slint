@@ -24,6 +24,7 @@ global Theme {
 component Snackbar inherits Rectangle {
     in property <string> text: "";
     in property <int> level: 0;
+    in property <int> id: 0;
 
     callback close-requested();
 
@@ -213,10 +214,11 @@ export component MainWindow inherits Window {
 
         VerticalBox {
             spacing: Theme.spacing;
-            for item in root.snackbar-items : Snackbar {
-                text: item.text;
-                level: item.level;
-                close-requested => { root.close-snackbar(item.id); }
+            for i in root.snackbar-items.length : Snackbar {
+                text: root.snackbar-items[root.snackbar-items.length - 1 - i].text;
+                level: root.snackbar-items[root.snackbar-items.length - 1 - i].level;
+                id: root.snackbar-items[root.snackbar-items.length - 1 - i].id;
+                close-requested => { root.close-snackbar(self.id); }
             }
         }
     }
