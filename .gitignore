@@ -10,3 +10,7 @@
 
 # Qwen Code state (choix utilisateur : non versionné)
 .qwen/
+
+# Local-only test data and generated output
+/data/
+/output/
