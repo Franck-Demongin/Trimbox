@@ -163,6 +163,14 @@ export component MainWindow inherits Window {
         height: root.height;
 
         report_focus := FocusScope {
+            in property <bool> report-open: root.report-visible;
+
+            changed report-open => {
+                if self.report-open {
+                    self.focus();
+                }
+            }
+
             x: 0px;
             y: 0px;
             width: parent.width;
