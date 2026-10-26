@@ -1,16 +1,13 @@
 #![cfg(feature = "gui")]
 
-use anyhow::anyhow;
 use anyhow::{Context, Result};
-use lopdf::Document;
-use serde_json::Value as JsonValue;
 use slint::ComponentHandle;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use trimbox_core::boxes::read_page_boxes;
-use trimbox_core::pdf::{load_document, page_count, save_document};
-use trimbox_core::{analyze_source, crop_document, normalize_pdf_x4, validate_pdf_x4};
+use trimbox_core::crop::crop_document;
+use trimbox_core::pdf::{load_document, save_document};
+use trimbox_core::{ColorMode, CropReport, IssueSeverity, PdfXValidationReport, validate_pdf_x4};
 
 slint::include_modules!();
 
@@ -31,7 +28,7 @@ pub fn run() -> Result<()> {
             if let Some(path) = dialog.pick_file() {
                 let source = path.display().to_string();
                 ui.set_source_path(source.clone().into());
-                let output = default_output_path(&path, "output");
+                let output = default_output_path(&path, "recadre");
                 ui.set_output_path(output.display().to_string().into());
                 set_status(&ui, "Source chargée.".to_owned(), 0);
             }
@@ -50,27 +47,6 @@ pub fn run() -> Result<()> {
         }
     });
 
-    let inspect_weak = weak.clone();
-    ui.on_inspect_source(move || {
-        if let Some(ui) = inspect_weak.upgrade() {
-            inspect_document(&ui);
-        }
-    });
-
-    let validate_weak = weak.clone();
-    ui.on_validate(move || {
-        if let Some(ui) = validate_weak.upgrade() {
-            validate_document(&ui);
-        }
-    });
-
-    let normalize_weak = weak.clone();
-    ui.on_normalize(move || {
-        if let Some(ui) = normalize_weak.upgrade() {
-            normalize_document(&ui);
-        }
-    });
-
     let crop_weak = weak.clone();
     ui.on_crop(move || {
         if let Some(ui) = crop_weak.upgrade() {
@@ -81,172 +57,6 @@ pub fn run() -> Result<()> {
     ui.run()
         .map_err(|error| anyhow::anyhow!("execution de l'interface impossible : {error}"))?;
     Ok(())
-}
-
-fn inspect_document(ui: &MainWindow) {
-    let path = source_path(ui);
-    if path.is_empty() {
-        set_status(ui, "Choisir d'abord un fichier source.".to_owned(), 2);
-        return;
-    }
-    let path = PathBuf::from(path);
-    let source = path.display().to_string();
-
-    let document = match load_document_for_inspection(&path, &source) {
-        Ok(document) => document,
-        Err(message) => {
-            set_report(
-                ui,
-                "Analyse de la source",
-                message.to_string(),
-                "Source non lisible.".to_owned(),
-                2,
-            );
-            return;
-        }
-    };
-
-    let document_summary = match build_source_report(&path, &source, &document) {
-        Ok(summary) => summary,
-        Err(message) => {
-            set_report(
-                ui,
-                "Analyse de la source",
-                format!("Analyse impossible: {message}"),
-                "Analyse échouée.".to_owned(),
-                2,
-            );
-            return;
-        }
-    };
-    set_report(
-        ui,
-        "Analyse de la source",
-        document_summary,
-        "Analyse terminée.".to_owned(),
-        0,
-    );
-}
-
-fn validate_document(ui: &MainWindow) {
-    let path = source_path(ui);
-    if path.is_empty() {
-        set_status(ui, "Choisir d'abord un fichier source.".to_owned(), 2);
-        return;
-    }
-    let path = PathBuf::from(path);
-    let source = path.display().to_string();
-    let bytes =
-        match fs::read(&path).with_context(|| format!("lecture impossible: {}", path.display())) {
-            Ok(bytes) => bytes,
-            Err(error) => {
-                set_status(ui, error.to_string(), 2);
-                return;
-            }
-        };
-    let document = match load_document(&bytes) {
-        Ok(document) => document,
-        Err(error) => {
-            set_status(ui, format!("PDF illisible : {error}"), 2);
-            return;
-        }
-    };
-
-    let report = validate_pdf_x4(&document, &source);
-    let level = report.exit_code().clamp(0, 2);
-    set_report(
-        ui,
-        "Validation PDF/X-4",
-        report.to_string(),
-        format!("Validation terminée (code {}).", report.exit_code()),
-        level,
-    );
-}
-
-fn normalize_document(ui: &MainWindow) {
-    let input_path = source_path(ui);
-    if input_path.is_empty() {
-        set_status(ui, "Choisir d'abord un fichier source.".to_owned(), 2);
-        return;
-    }
-    let output = output_path(ui);
-    let fallback = default_output_path(Path::new(&input_path), "x4");
-    let output = if output.is_empty() {
-        fallback
-    } else {
-        PathBuf::from(output)
-    };
-    if same_path(Path::new(&input_path), &output) {
-        set_status(
-            ui,
-            "Le fichier de sortie doit differer du fichier source.".to_owned(),
-            2,
-        );
-        return;
-    }
-    let input = PathBuf::from(input_path);
-    let source = input.display().to_string();
-    let output_display = output.display().to_string();
-
-    let bytes = match fs::read(&input)
-        .with_context(|| format!("lecture impossible: {}", input.display()))
-    {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            set_status(ui, error.to_string(), 2);
-            return;
-        }
-    };
-    let mut document = match load_document(&bytes) {
-        Ok(document) => document,
-        Err(error) => {
-            set_status(ui, format!("PDF illisible : {error}"), 2);
-            return;
-        }
-    };
-
-    let report = match normalize_pdf_x4(&mut document, &source, &output_display) {
-        Ok(report) => report,
-        Err(error) => {
-            set_status(ui, format!("Normalisation impossible : {error}"), 2);
-            return;
-        }
-    };
-
-    if report.blocked.is_none() {
-        match save_document(&mut document) {
-            Ok(bytes) => {
-                if let Err(error) = fs::write(&output, bytes) {
-                    set_status(ui, format!("Ecriture impossible : {error}"), 2);
-                    return;
-                }
-            }
-            Err(error) => {
-                set_status(ui, format!("Serialisation impossible : {error}"), 2);
-                return;
-            }
-        }
-        ui.set_output_path(output_display.clone().into());
-        set_report(
-            ui,
-            "Normalisation PDF/X-4",
-            report.to_string(),
-            format!(
-                "PDF normalisé : {} (code {}).",
-                output_display,
-                report.after.exit_code()
-            ),
-            report.after.exit_code().clamp(0, 2),
-        );
-    } else {
-        set_report(
-            ui,
-            "Normalisation PDF/X-4",
-            report.to_string(),
-            "Normalisation bloquée.".to_owned(),
-            2,
-        );
-    }
 }
 
 fn crop_document_gui(ui: &MainWindow) {
@@ -269,6 +79,7 @@ fn crop_document_gui(ui: &MainWindow) {
             return;
         }
     };
+
     let input_path = PathBuf::from(input);
     let source = input_path.display().to_string();
     let fallback = PathBuf::from(format!(
@@ -285,6 +96,7 @@ fn crop_document_gui(ui: &MainWindow) {
             PathBuf::from(current)
         }
     };
+
     if same_path(&input_path, &output) {
         set_status(
             ui,
@@ -293,6 +105,7 @@ fn crop_document_gui(ui: &MainWindow) {
         );
         return;
     }
+
     let bytes = match fs::read(&input_path)
         .with_context(|| format!("lecture impossible: {}", input_path.display()))
     {
@@ -309,6 +122,9 @@ fn crop_document_gui(ui: &MainWindow) {
             return;
         }
     };
+
+    let validation = validate_pdf_x4(&document, &source);
+
     let report = match crop_document(
         &mut document,
         width,
@@ -318,78 +134,176 @@ fn crop_document_gui(ui: &MainWindow) {
     ) {
         Ok(report) => report,
         Err(error) => {
-            set_status(ui, format!("Recadrage impossible : {error}"), 2);
+            set_report(
+                ui,
+                "Résultat",
+                format!("Recadrage impossible : {error}"),
+                "Recadrage impossible.".to_owned(),
+                2,
+            );
             return;
         }
     };
-    match save_document(&mut document) {
-        Ok(bytes) => {
-            if let Err(error) = fs::write(&output, bytes) {
-                set_status(ui, format!("Ecriture impossible : {error}"), 2);
-                return;
-            }
-        }
+
+    let saved_bytes = match save_document(&mut document) {
+        Ok(bytes) => bytes,
         Err(error) => {
             set_status(ui, format!("Serialisation impossible : {error}"), 2);
             return;
         }
+    };
+
+    if let Err(error) = fs::write(&output, saved_bytes) {
+        set_status(ui, format!("Ecriture impossible : {error}"), 2);
+        return;
     }
+
+    let output_size = fs::metadata(&output)
+        .map(|metadata| metadata.len())
+        .unwrap_or_default();
     ui.set_output_path(output.display().to_string().into());
+
+    let warning_count = warning_count_for_crop(&report, &validation);
+    let level = if warning_count > 0 { 1 } else { 0 };
+    let status = if warning_count > 0 {
+        format!("Recadrage terminé avec {} avertissement(s).", warning_count)
+    } else {
+        "Recadrage terminé.".to_owned()
+    };
     set_report(
         ui,
-        "Recadrage PDF/X-4",
-        report.to_string(),
-        format!(
-            "PDF recadré en {width} x {height} mm : {}.",
-            output.display()
-        ),
-        0,
+        "Résultat",
+        format_crop_summary(&report, &validation, output_size),
+        status,
+        level,
     );
 }
 
-fn load_document_for_inspection(_path: &Path, _source: &str) -> Result<lopdf::Document> {
-    let bytes =
-        fs::read(_path).with_context(|| format!("lecture impossible: {}", _path.display()))?;
-    load_document(&bytes).map_err(|error| anyhow!(format!("PDF illisible : {error}")))
-}
+pub fn format_crop_summary(
+    report: &CropReport,
+    validation: &PdfXValidationReport,
+    output_size: u64,
+) -> String {
+    let color_mode = report.source_characteristics.color.mode().label();
+    let mut warnings = Vec::new();
 
-fn build_source_report(_path: &Path, source: &str, document: &Document) -> Result<String> {
-    let boxes = read_page_boxes(document)
-        .map_err(|error| anyhow!(format!("lecture des boites impossible : {error}")))?;
-    let characteristics = analyze_source(document);
-    let mut lines = Vec::new();
-    lines.push(format!("PDF lisible : {}", source));
-    lines.push(format!("Pages : {}", page_count(document)));
-    for page in boxes {
-        lines.push(format!(
-            "page {} : MediaBox={:?} CropBox={:?} TrimBox={:?} BleedBox={:?} ArtBox={:?}",
-            page.page, page.media, page.crop, page.trim, page.bleed, page.art
+    let fallback = report.source_characteristics.color.fallback_note();
+    if fallback.contains("Repli") && !fallback.contains("Aucun repli couleur") {
+        warnings.push(format!("Couleur : {fallback}"));
+    }
+    if report.source_characteristics.color.mode() == ColorMode::Unknown {
+        warnings.push(
+            "Couleur source : aucun mode détecté; les flots source restent conservés.".to_owned(),
+        );
+    }
+
+    let issues: Vec<_> = validation
+        .issues
+        .iter()
+        .filter(|issue| issue.severity >= IssueSeverity::Warning)
+        .collect();
+    for issue in issues.iter().take(8) {
+        warnings.push(format!(
+            "[{}] {} : {}",
+            issue.severity.label(),
+            issue.code,
+            issue.message
         ));
     }
+    if issues.len() > 8 {
+        warnings.push(format!(
+            "... {} avertissement(s) supplémentaire(s) non affiché(s).",
+            issues.len() - 8
+        ));
+    }
+
+    let validation_line = if validation.issues.is_empty() {
+        "Validation PDF/X-4 : aucune non-conformité détectée.".to_owned()
+    } else {
+        format!(
+            "Validation PDF/X-4 : {} écart(s), dont {} erreur(s) et {} avertissement(s).",
+            validation.issues.len(),
+            validation
+                .issues
+                .iter()
+                .filter(|issue| issue.severity == IssueSeverity::Error)
+                .count(),
+            validation
+                .issues
+                .iter()
+                .filter(|issue| issue.severity == IssueSeverity::Warning)
+                .count()
+        )
+    };
+
+    let page_word = if report.page_count <= 1 {
+        "page"
+    } else {
+        "pages"
+    };
+
+    let mut lines = Vec::new();
+    lines.push("Trimbox — résultat".to_owned());
+    lines.push(format!("Fichier source : {}", report.source));
+    lines.push(format!("Fichier généré : {}", report.output));
+    lines.push("Résultat global : SUCCES".to_owned());
     lines.push(format!(
-        "Couleur source : {}",
-        characteristics.color.mode().label()
+        "Dimensions recadrées : {:.2} mm x {:.2} mm ({} x {} pt)",
+        report.requested_width_mm,
+        report.requested_height_mm,
+        format_pt(report.requested_width_pt),
+        format_pt(report.requested_height_pt)
+    ));
+    lines.push(format!("Pages : {} {}", report.page_count, page_word));
+    lines.push(format!("Couleur source : {}", color_mode));
+    lines.push(format!(
+        "Profils ICC source : {}",
+        report.source_characteristics.color.icc_profile_count()
     ));
     lines.push(format!(
-        "Profils ICC source : {} (sorties : {})",
-        characteristics.color.icc_profile_count(),
-        characteristics.color.output_intent_profile_count
+        "Profils de sortie : {}",
+        report
+            .source_characteristics
+            .color
+            .output_intent_profile_count
     ));
-    lines.push(format!("Métadonnées : {}", characteristics.metadata_note()));
-    Ok(lines.join("\n"))
+    lines.push(format!(
+        "Taille du fichier produit : {}",
+        format_bytes(output_size)
+    ));
+    lines.push(validation_line);
+
+    let mut output = lines.join("\n");
+    if warnings.is_empty() {
+        output.push_str("\nAvertissements : aucun.");
+    } else {
+        output.push_str("\nAvertissements :");
+        for warning in warnings {
+            output.push('\n');
+            output.push_str("- ");
+            output.push_str(&warning);
+        }
+    }
+
+    output
 }
 
-fn set_report(
-    ui: &MainWindow,
-    title: impl Into<slint::SharedString>,
-    report: String,
-    status: impl Into<slint::SharedString>,
-    level: i32,
-) {
-    ui.set_report_title(title.into());
-    let report = format_report_body("report", &report);
-    ui.set_report(report.into());
-    set_status(ui, status, level);
+#[allow(dead_code)]
+pub fn format_crop_report(
+    report: &CropReport,
+    validation: &PdfXValidationReport,
+    output_size: u64,
+) -> String {
+    format_crop_summary(report, validation, output_size)
+}
+
+#[allow(dead_code)]
+pub fn format_crop_result(
+    report: &CropReport,
+    validation: &PdfXValidationReport,
+    output_size: u64,
+) -> String {
+    format_crop_summary(report, validation, output_size)
 }
 
 pub fn format_report_body(_kind: &str, raw: &str) -> String {
@@ -430,7 +344,8 @@ pub fn normalize_blank_lines(raw: &str) -> String {
 
 pub fn format_json_value(raw: &str) -> String {
     let trimmed = raw.trim();
-    match serde_json::from_str::<JsonValue>(trimmed) {
+    let parsed = serde_json::from_str::<serde_json::Value>(trimmed);
+    match parsed {
         Ok(value) => serde_json::to_string_pretty(&value).unwrap_or_else(|_| trimmed.to_owned()),
         Err(_) => trimmed.to_owned(),
     }
@@ -463,7 +378,7 @@ pub fn annotate_json_on_line(line: &str) -> String {
         if !line.is_char_boundary(index) {
             continue;
         }
-        if serde_json::from_str::<JsonValue>(&line[start..index]).is_ok() {
+        if serde_json::from_str::<serde_json::Value>(&line[start..index]).is_ok() {
             end = Some(index);
             break;
         }
@@ -474,7 +389,7 @@ pub fn annotate_json_on_line(line: &str) -> String {
 
     let prefix = line[..start].trim_end();
     let pretty = serde_json::to_string_pretty(
-        &serde_json::from_str::<JsonValue>(&line[start..end]).unwrap(),
+        &serde_json::from_str::<serde_json::Value>(&line[start..end]).unwrap(),
     )
     .unwrap_or_else(|_| line[start..end].to_owned());
     let suffix = &line[end..];
@@ -487,6 +402,19 @@ pub fn annotate_json_on_line(line: &str) -> String {
         format!("{prefix} {pretty}")
     };
     format!("{joined}{suffix}")
+}
+
+fn set_report(
+    ui: &MainWindow,
+    title: impl Into<slint::SharedString>,
+    report: String,
+    status: impl Into<slint::SharedString>,
+    level: i32,
+) {
+    ui.set_report_title(title.into());
+    let report = format_report_body("report", &report);
+    ui.set_report(report.into());
+    set_status(ui, status, level);
 }
 
 fn set_status(ui: &MainWindow, status: impl Into<slint::SharedString>, level: i32) {
@@ -522,9 +450,46 @@ fn same_path(left: &Path, right: &Path) -> bool {
     }
 }
 
+fn format_bytes(size: u64) -> String {
+    match size {
+        0 => "taille non disponible".to_owned(),
+        1..=1023 => format!("{} octets", size),
+        1024..=1_048_575 => format!("{:.1} Ko", size as f64 / 1024.0),
+        _ => format!("{:.1} Mo", size as f64 / 1_048_576.0),
+    }
+}
+
+fn warning_count_for_crop(report: &CropReport, validation: &PdfXValidationReport) -> usize {
+    let mut count = 0;
+    let fallback = report.source_characteristics.color.fallback_note();
+    if fallback.contains("Repli") && !fallback.contains("Aucun repli couleur") {
+        count += 1;
+    }
+    if report.source_characteristics.color.mode() == ColorMode::Unknown {
+        count += 1;
+    }
+    let issue_count = validation
+        .issues
+        .iter()
+        .filter(|issue| issue.severity >= IssueSeverity::Warning)
+        .count();
+    count + issue_count
+}
+
+fn format_pt(value: f64) -> String {
+    if (value - value.round()).abs() < 0.005 {
+        format!("{}", value.round() as i64)
+    } else {
+        format!("{:.2}", value)
+    }
+}
+
 #[cfg(test)]
 mod report_format_tests {
     use super::*;
+    use lopdf::Document;
+    use trimbox_core::boxes::Rect;
+    use trimbox_core::{CropReport, IssueSeverity, PdfXIssue, PdfXValidationReport};
 
     #[test]
     fn blank_lines_are_normalized() {
@@ -550,5 +515,92 @@ mod report_format_tests {
     #[test]
     fn invalid_json_falls_back_to_input() {
         assert_eq!(format_json_value("not json"), "not json");
+    }
+
+    #[test]
+    fn crop_summary_stays_concise_and_essential() {
+        let mut report = CropReport::new("source.pdf", "result.pdf", 85.0, 55.0);
+        report.add_page(
+            1,
+            Rect {
+                llx: 0.0,
+                lly: 0.0,
+                urx: 595.0,
+                ury: 842.0,
+            },
+            Rect {
+                llx: 0.0,
+                lly: 0.0,
+                urx: trimbox_core::mm_to_pt(85.0),
+                ury: trimbox_core::mm_to_pt(55.0),
+            },
+        );
+        report.finalize();
+
+        let mut validation = PdfXValidationReport::new("source.pdf", &Document::new());
+        validation.push(PdfXIssue::new(
+            IssueSeverity::Warning,
+            "TEST",
+            "avertissement de test",
+        ));
+
+        let summary = format_crop_summary(&report, &validation, 42000);
+        assert!(summary.contains("Fichier source : source.pdf"));
+        assert!(summary.contains("Fichier généré : result.pdf"));
+        assert!(summary.contains("Résultat global : SUCCES"));
+        assert!(summary.contains("Pages : 1 page"));
+        assert!(summary.contains("Couleur source :"));
+        assert!(summary.contains("Taille du fichier produit : 41.0 Ko"));
+        assert!(!summary.contains("Métadonnées"));
+        assert!(!summary.contains("Page crop"));
+        assert!(summary.contains("Avertissements :"));
+        assert!(summary.contains("[AVERTISSEMENT] TEST : avertissement de test"));
+    }
+
+    #[test]
+    fn crop_summary_can_report_no_warnings() {
+        let mut report = CropReport::new("source.pdf", "result.pdf", 85.0, 55.0);
+        report.source_characteristics.color.cmyk_present = true;
+        report.source_characteristics.color.icc_profile_count = 1;
+        report
+            .source_characteristics
+            .color
+            .output_intent_profile_count = 1;
+        report.add_page(
+            1,
+            Rect {
+                llx: 0.0,
+                lly: 0.0,
+                urx: 595.0,
+                ury: 842.0,
+            },
+            Rect {
+                llx: 0.0,
+                lly: 0.0,
+                urx: trimbox_core::mm_to_pt(85.0),
+                ury: trimbox_core::mm_to_pt(55.0),
+            },
+        );
+        report.finalize();
+
+        let validation = PdfXValidationReport::new("source.pdf", &Document::new());
+        let summary = format_crop_summary(&report, &validation, 2048);
+        assert!(summary.contains("Avertissements : aucun."));
+    }
+
+    #[test]
+    fn format_aliases_match_summary() {
+        let mut report = CropReport::new("source.pdf", "result.pdf", 85.0, 55.0);
+        report.finalize();
+        let validation = PdfXValidationReport::new("source.pdf", &Document::new());
+        let size = 1024;
+        assert_eq!(
+            format_crop_summary(&report, &validation, size),
+            format_crop_report(&report, &validation, size)
+        );
+        assert_eq!(
+            format_crop_summary(&report, &validation, size),
+            format_crop_result(&report, &validation, size)
+        );
     }
 }

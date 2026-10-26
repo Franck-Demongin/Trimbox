@@ -6,26 +6,22 @@ global Theme {
 
 export component MainWindow inherits Window {
     title: "Trimbox";
-    preferred-width: 1020px;
-    preferred-height: 760px;
-    min-width: 880px;
-    min-height: 620px;
+    preferred-width: 860px;
+    preferred-height: 520px;
+    min-width: 760px;
+    min-height: 460px;
 
     in-out property <string> source-path: "";
     in-out property <string> output-path: "";
     in-out property <string> crop-width-mm: "85";
     in-out property <string> crop-height-mm: "55";
-    in property <string> report-title: "Rapport Trimbox";
+    in property <string> report-title: "Résultat";
     in property <string> report: "";
     in property <string> status: "Prêt.";
     in property <int> status-level: 0;
-    in property <bool> busy: false;
 
     callback browse-source();
     callback browse-output();
-    callback inspect-source();
-    callback validate();
-    callback normalize();
     callback crop();
 
     VerticalBox {
@@ -55,6 +51,37 @@ export component MainWindow inherits Window {
             }
         }
 
+        HorizontalBox {
+            spacing: Theme.spacing;
+            alignment: stretch;
+            Text { text: "Source"; min-width: 72px; vertical-alignment: center; }
+            LineEdit { text <=> root.source-path; placeholder-text: "Chemin du PDF source"; horizontal-stretch: 1; }
+            Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-source(); } }
+        }
+
+        HorizontalBox {
+            spacing: Theme.spacing;
+            alignment: stretch;
+            Text { text: "Sortie"; min-width: 72px; vertical-alignment: center; }
+            LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré"; horizontal-stretch: 1; }
+            Button { text: "Choisir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
+        }
+
+        HorizontalBox {
+            spacing: Theme.spacing;
+            Text { text: "Largeur crop (mm)"; vertical-alignment: center; }
+            LineEdit { text <=> root.crop-width-mm; placeholder-text: "85"; horizontal-stretch: 1; min-width: 120px; }
+            Text { text: "Hauteur crop (mm)"; vertical-alignment: center; }
+            LineEdit { text <=> root.crop-height-mm; placeholder-text: "55"; horizontal-stretch: 1; min-width: 120px; }
+        }
+
+        Button {
+            text: "Recadrer";
+            primary: true;
+            horizontal-stretch: 1;
+            clicked => { root.crop(); }
+        }
+
         Text {
             text: root.report-title;
             font-size: 14px;
@@ -69,7 +96,7 @@ export component MainWindow inherits Window {
             border-radius: 6px;
             horizontal-stretch: 1;
             vertical-stretch: 1;
-            min-height: 290px;
+            min-height: 180px;
             clip: true;
 
             VerticalBox {
@@ -94,38 +121,6 @@ export component MainWindow inherits Window {
                     }
                 }
             }
-        }
-
-        HorizontalBox {
-            spacing: Theme.spacing;
-            alignment: stretch;
-            Text { text: "Source"; min-width: 72px; vertical-alignment: center; }
-            LineEdit { text <=> root.source-path; placeholder-text: "Chemin du PDF source"; horizontal-stretch: 1; }
-            Button { text: "Parcourir..."; enabled: !root.busy; horizontal-stretch: 0; clicked => { root.browse-source(); } }
-        }
-
-        HorizontalBox {
-            spacing: Theme.spacing;
-            alignment: stretch;
-            Text { text: "Sortie"; min-width: 72px; vertical-alignment: center; }
-            LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré (pour la normalisation et le recadrage)"; horizontal-stretch: 1; }
-            Button { text: "Choisir..."; enabled: !root.busy; horizontal-stretch: 0; clicked => { root.browse-output(); } }
-        }
-
-        HorizontalBox {
-            spacing: Theme.spacing;
-            Text { text: "Largeur crop (mm)"; vertical-alignment: center; }
-            LineEdit { text <=> root.crop-width-mm; placeholder-text: "85"; horizontal-stretch: 1; min-width: 120px; }
-            Text { text: "Hauteur crop (mm)"; vertical-alignment: center; }
-            LineEdit { text <=> root.crop-height-mm; placeholder-text: "55"; horizontal-stretch: 1; min-width: 120px; }
-        }
-
-        HorizontalBox {
-            spacing: Theme.spacing;
-            Button { text: "Inspecter"; enabled: !root.busy; primary: true; clicked => { root.inspect-source(); } }
-            Button { text: "Valider"; enabled: !root.busy; clicked => { root.validate(); } }
-            Button { text: "Normaliser"; enabled: !root.busy; clicked => { root.normalize(); } }
-            Button { text: "Recadrer"; enabled: !root.busy; clicked => { root.crop(); } }
         }
     }
 }
