@@ -85,6 +85,19 @@ QWEN.md
 
 Aucune capture n'est actuellement versionnée. Ajoutez les captures disponibles dans les sections correspondantes sans masquer les dépendances ci-dessus.
 
+## Documentation Slint (via slint-docs)
+
+- Les modifications de l'interface graphique sont réalisées avec l'agent `slint-ui` et le serveur MCP `slint-docs`.
+- Avant toute modification d'un fichier `.slint`, utiliser le serveur MCP `slint-docs` :
+  1. `slint_docs_search` avec un mot-clé précis ;
+  2. `slint_reference_describe` avant d'utiliser ou de modifier un widget, élément ou type ;
+  3. `slint_docs_get_page` pour les détails de syntaxe ou les exemples ;
+  4. `slint_docs_list` si le terme exact est inconnu.
+- Serveur : `/home/franck/Dev/MCP/slint_docs_mcp`, lancé avec `uv --directory ... python -m slint_docs_mcp --transport stdio`.
+- Version Slint documentée : celle de `Cargo.lock` (1.18.1), donc `SLINT_DOCS_VERSION=1`. Ne pas intégrer d'API absente de cette version.
+- Vérifier `page_url` en croisant avec la documentation publiée.
+- Conserver les règles Slint existantes et exécuter les tests après modification.
+
 ## Licence
 
 GPL-3.0-or-later. La licence de Slint open source impose une licence compatible pour une distribution open source. Les licences commerciales de Slint sont nécessaires pour une distribution propriétaire.
