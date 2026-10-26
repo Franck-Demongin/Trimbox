@@ -207,8 +207,8 @@ export component MainWindow inherits Window {
         visible: root.snackbar-items.length > 0;
         width: min(460px, root.width - Theme.spacing * 2);
         height: self.preferred-height;
-        x: max(Theme.spacing, (root.width - self.width) / 2);
-        y: root.height - self.height - Theme.spacing * 2;
+        x: max(Theme.spacing, root.width - self.width - Theme.spacing * 2);
+        y: Theme.spacing * 2;
         background: transparent;
 
         VerticalBox {
