@@ -510,7 +510,6 @@ fn open_output_gui(ui: &MainWindow, folder: bool, snackbar_state: &Rc<RefCell<Sn
     let state = snackbar_state;
     let path = output_path(ui);
     if path.is_empty() {
-        set_status(ui, state, "Aucun fichier généré disponible.".to_owned(), 2);
         return;
     }
     let path = PathBuf::from(path);
@@ -521,18 +520,8 @@ fn open_output_gui(ui: &MainWindow, folder: bool, snackbar_state: &Rc<RefCell<Sn
     } else {
         path
     };
-    match open_system_path(&target) {
-        Ok(()) => set_status(
-            ui,
-            state,
-            if folder {
-                "Dossier ouvert.".to_owned()
-            } else {
-                "Fichier ouvert.".to_owned()
-            },
-            0,
-        ),
-        Err(error) => set_status(ui, state, format!("Ouverture impossible : {error}"), 2),
+    if let Err(error) = open_system_path(&target) {
+        set_status(ui, state, format!("Ouverture impossible : {error}"), 2);
     }
 }
 
