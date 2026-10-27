@@ -61,7 +61,7 @@ Toutes les valeurs sont en pixels Slint.
 
 | Token | Valeur | Usage |
 |---|---:|---|
-| `Theme.label-min-width` | `72px` | réservé pour une future réutilisation des étiquettes |
+| `Theme.label-min-width` | `0px` | réservé ; aucune largeur minimale n'est imposée pour les libellés compacts |
 | `Theme.crop-field-min-width` | `120px` | largeur minimale des champs Largeur crop et Hauteur crop |
 | `Theme.frame-min-height` | `240px` | hauteur minimale du cadre de rapport |
 
@@ -79,7 +79,7 @@ global Theme {
     out property <length> dialog-width: 760px;
     out property <length> dialog-height: 500px;
     out property <length> dialog-vertical-margin: 45px;
-    out property <length> label-min-width: 72px;
+    out property <length> label-min-width: 0px;
     out property <length> crop-field-min-width: 120px;
     out property <length> frame-min-height: 240px;
     out property <length> corner-radius: 6px;
@@ -138,17 +138,21 @@ Pour conserver le contraste restauré dans les notifications, ne pas remplacer l
 | sous-titre d'en-tête | `12px` | défaut | `Palette.foreground` | défaut |
 | rapport monospace | `12px` | défaut | `Palette.foreground` | `"monospace"` |
 | autre texte standard | défaut `Text` Slint | défaut | défaut | défaut |
+| libellé compact de champ (`Dossier`, `Fichier`, `Feuille — …`, etc.) | taille par défaut de `Text` Slint | défaut | défaut | défaut |
+| libellé secondaire de synthèse (`Dossier :`, `Fichier :`, etc.) | `12px` (`Theme.font-small`) | défaut | `Palette.alternate-foreground` | défaut |
 
 L'en-tête compact utilise un icône image de 48x48 placé à gauche du bloc titre/sous-titre. Le libellé window "ProjectName" est stocké dans la propriété `title` de la fenêtre, pas dans une étiquette du layout principal.
 
 ## 5. Organisation visuelle générale
 
+
 - Fenêtre sans cadre graphique global autour de tout le contenu.
 - Une barre d'en-tête compacte occupe le haut.
 - Les zones fonctionnelles sont trois cartes thématiques empilées.
 - Un espacement de `8px` sépare les éléments principaux.
-- Un bloc flexible invisible réserve l'espace vertical libre et maintient la barre d'actions en bas.
-- Les actions principales se trouvent dans une `HorizontalBox` alignée à droite.
+- Un bloc flexible invisible occupe l'espace vertical libre et maintient le pied de page en bas.
+- Un séparateur horizontal de 1 px (`Palette.border`) précède le pied de page.
+- Le pied de page reste visible à tout moment pendant l'interaction : ouverture de fichier/dossier à gauche, action principale à droite.
 
 ## 6. Composants de layout
 
@@ -268,7 +272,8 @@ Règles :
 - les deux champs de recadrage ont la même largeur minimale ;
 - la barre des dimensions utilise le même espacement standard.
 
-### 6.4 Barre d'actions secondaires
+### 6.4 Pied de page et actions permanentes
+Pied de page permanent, situé sous les cartes principales et le séparateur de 1 px. Il reste visible pendant toute l'interaction et ne défile pas avec le contenu principal.
 
 Ordre tel qu'il figure dans le Slint actuel, de gauche à droite :
 
@@ -283,6 +288,41 @@ Règles :
 - les actions conditionnelles se placent à gauche de l'action principale ;
 - `Rapport` doit être le plus à gauche, puis les actions d'ouverture ;
 - la barre utilise la même `HorizontalBox` standard.
+- un séparateur horizontal de 1 px (`Palette.border`) précède le pied de page ;
+- les boutons secondaires et d'ouverture sont en `horizontal-stretch: 0` et calés à gauche ;
+- un `Rectangle { horizontal-stretch: 1; }` placé avant l'action principale la force à droite ;
+- l'action principale utilise `primary: true` avec `horizontal-stretch: 0`.
+
+### 6.5 Grille compacte de champs et libellés
+
+Les libellés primaires de formulaires sont plus compacts dans Imposer qu'auparavant : ce sont des `Text` simples, sans padding direct ni largeur minimale imposée.
+
+```slint
+GridLayout {
+    spacing-horizontal: Theme.spacing;
+    spacing-vertical: Theme.spacing;
+
+    Text { text: "Dossier"; row: 0; col: 0; vertical-alignment: center; }
+    LineEdit { text <=> root.output-dir; row: 0; col: 1; horizontal-stretch: 1; }
+    Button { text: "Dossier…"; icon: @image-url("../assets/icons/ui/folder-open.svg"); icon-size: 16px; colorize-icon: true; enabled: !root.busy; row: 0; col: 2; min-width: 100px; }
+
+    Text { text: "Fichier"; row: 1; col: 0; vertical-alignment: center; }
+    LineEdit { text <=> root.output-name; row: 1; col: 1; horizontal-stretch: 1; }
+
+    Text { text: "Feuille — " + root.selected-sheet-name; row: 2; col: 0; }
+    Text { text: "Orientation feuille"; row: 2; col: 1; }
+}
+```
+
+Règles :
+
+- les libellés primaires de champ sont des `Text` simples ;
+- aucun `padding` ne leur est appliqué directement ;
+- aucune largeur minimale n'est imposée via `label-min-width` ;
+- l'espacement horizontal et vertical de la grille est `Theme.spacing` ;
+- `vertical-alignment: center` est utilisé pour les libellés accompagnant des champs ou boutons ;
+- le padding standard de `8px` reste porté par la carte conteneur ;
+- ne pas réintroduire un `min-width` ou un padding sur les libellés sans raison fonctionnelle.
 
 ## 7. Composant Slint `Snackbar`
 
@@ -552,8 +592,9 @@ struct SnackbarItem {
 7. Arrêter tout mouvement latéral avec `content-width: self.visible-width` et `min-width: 0px`.
 8. Garder l'overlay modal `#00000080`, l'escape et la fermeture par bouton standard.
 9. Maintenir les libellés empilés au-dessus des champs.
-10. Conserver l'action principale à droite après les actions secondaires.
+10. Conserver le pied de page permanent : séparateur de 1 px, boutons d'ouverture à gauche, filler horizontal, action principale à droite.
 11. Vérifier les commandes clippy/test et l'affichage sur thème clair et sombre.
+12. Conserver les libellés primaires de formulaires compacts, sans padding direct, avec espacement de grille à `Theme.spacing`, sauf exception explicite.
 
 ## 13. Garde-fous explicites
 
@@ -564,6 +605,9 @@ struct SnackbarItem {
 - ne pas faire déborder la barre horizontale de rapport ;
 - ne pas ajouter de second cadre de rapport ;
 - ne pas retirer un global de tokens partagé ;
+- ne pas supprimer le séparateur de 1 px avant le pied de page ;
+- ne pas remplacer le filler horizontal par un alignement ambigu ;
+- ne pas faire disparaître le pied de page pendant la navigation ou le défilement ;
 - ne pas ajouter de style graphique décoratif au-delà de cette référence, en accord avec la spécification du projet porté.
 
 ## 14. Icônes UI et boutons
