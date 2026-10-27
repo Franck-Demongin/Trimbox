@@ -19,6 +19,8 @@ pub fn run() -> Result<()> {
     let ui = MainWindow::new()
         .map_err(|error| anyhow::anyhow!("creation de la fenetre impossible : {error}"))?;
 
+    ui.set_window_title(format!("Trimbox - v{}", env!("CARGO_PKG_VERSION")).into());
+
     let _ = slint::set_xdg_app_id("io.github.Franck-Demongin.Trimbox");
 
     let weak = ui.as_weak();

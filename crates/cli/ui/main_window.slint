@@ -18,7 +18,7 @@ global Theme {
 }
 
 export component MainWindow inherits Window {
-    title: "Trimbox";
+    title: root.window-title;
     preferred-width: Theme.window-preferred-width;
     preferred-height: Theme.window-preferred-height;
     min-width: Theme.window-min-width;
@@ -33,6 +33,7 @@ export component MainWindow inherits Window {
     in property <bool> output-available: false;
     in property <bool> report-available: false;
     in-out property <[SnackbarItem]> snackbar-items: [];
+    in property <string> window-title: "Trimbox";
 
     in-out property <bool> report-visible: false;
 
