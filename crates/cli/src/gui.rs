@@ -598,6 +598,7 @@ fn format_pt(value: f64) -> String {
 struct SnackbarNotice {
     text: String,
     level: i32,
+    closing: bool,
 }
 
 // Compatibility state retained for the original single-snackbar tests.
@@ -657,13 +658,44 @@ impl SnackbarQueue {
         }
     }
 
+    fn begin_toast_closing(&mut self, id: u32) -> bool {
+        if let Some(index) = self.ids.iter().position(|value| *value == id) {
+            if self.stack[index].closing {
+                false
+            } else {
+                self.stack[index].closing = true;
+                true
+            }
+        } else {
+            false
+        }
+    }
+
+    fn finalize_toast_removal(&mut self, id: u32) -> bool {
+        if let Some(index) = self.ids.iter().position(|value| *value == id) {
+            if self.stack[index].closing {
+                self.stack.remove(index);
+                self.ids.remove(index);
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
     fn visible_toasts(&self) -> Vec<SnackbarNotice> {
         self.stack.iter().cloned().collect()
     }
 }
 
 fn enqueue_snackbar(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>, text: String, level: i32) {
-    let notice = SnackbarNotice { text, level };
+    let notice = SnackbarNotice {
+        text,
+        level,
+        closing: false,
+    };
     let id = state.borrow_mut().push_toast(notice);
     sync_snackbar_stack(ui, state);
     schedule_auto_dismiss(ui.as_weak(), state.clone(), id);
@@ -679,16 +711,33 @@ fn sync_snackbar_stack(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>) {
             text: notice.text.clone().into(),
             level: notice.level,
             id: *id as i32,
+            closing: notice.closing,
         })
         .collect();
     ui.set_snackbar_items(slint::ModelRc::new(slint::VecModel::from(items)));
 }
 
 fn dismiss_snackbar(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>, toast_id: i32) {
-    let removed = state.borrow_mut().remove_toast(toast_id as u32);
-    if removed {
-        sync_snackbar_stack(ui, state);
+    const TOAST_DISMISS_ANIMATION_DURATION: Duration = Duration::from_millis(200);
+
+    let id = toast_id as u32;
+    let started = state.borrow_mut().begin_toast_closing(id);
+    if !started {
+        return;
     }
+
+    sync_snackbar_stack(ui, state);
+
+    let ui = ui.as_weak();
+    let state = state.clone();
+    slint::Timer::single_shot(TOAST_DISMISS_ANIMATION_DURATION, move || {
+        if let Some(ui) = ui.upgrade() {
+            let removed = state.borrow_mut().finalize_toast_removal(id);
+            if removed {
+                sync_snackbar_stack(&ui, &state);
+            }
+        }
+    });
 }
 
 fn schedule_auto_dismiss(ui: slint::Weak<MainWindow>, state: Rc<RefCell<SnackbarQueue>>, id: u32) {
@@ -854,6 +903,7 @@ mod snackbar_queue_tests {
         assert!(queue.enqueue(SnackbarNotice {
             text: "alpha".to_owned(),
             level: 0,
+            closing: false,
         }));
         assert_eq!(queue.pending.len(), 1);
         assert!(queue.active.is_none());
@@ -865,6 +915,7 @@ mod snackbar_queue_tests {
         queue.enqueue(SnackbarNotice {
             text: "alpha".to_owned(),
             level: 1,
+            closing: false,
         });
         let notice = queue.take_next().unwrap();
         assert_eq!(notice.text, "alpha");
@@ -878,10 +929,12 @@ mod snackbar_queue_tests {
         queue.enqueue(SnackbarNotice {
             text: "first".to_owned(),
             level: 0,
+            closing: false,
         });
         queue.enqueue(SnackbarNotice {
             text: "second".to_owned(),
             level: 2,
+            closing: false,
         });
         queue.take_next();
         let next = queue.dismiss().unwrap();
@@ -901,10 +954,12 @@ mod snackbar_queue_tests {
         let first = queue.push_toast(SnackbarNotice {
             text: "first".to_owned(),
             level: 0,
+            closing: false,
         });
         let second = queue.push_toast(SnackbarNotice {
             text: "second".to_owned(),
             level: 1,
+            closing: false,
         });
 
         assert_eq!(queue.stack.len(), 2);
@@ -930,18 +985,22 @@ mod snackbar_queue_tests {
         queue.push_toast(SnackbarNotice {
             text: "first".to_owned(),
             level: 0,
+            closing: false,
         });
         let second = queue.push_toast(SnackbarNotice {
             text: "second".to_owned(),
             level: 0,
+            closing: false,
         });
         let third = queue.push_toast(SnackbarNotice {
             text: "third".to_owned(),
             level: 0,
+            closing: false,
         });
         let fourth = queue.push_toast(SnackbarNotice {
             text: "fourth".to_owned(),
             level: 0,
+            closing: false,
         });
 
         assert_eq!(queue.stack.len(), 3);
@@ -968,10 +1027,12 @@ mod snackbar_queue_tests {
         let first = queue.push_toast(SnackbarNotice {
             text: "first".to_owned(),
             level: 0,
+            closing: false,
         });
         let second = queue.push_toast(SnackbarNotice {
             text: "second".to_owned(),
             level: 0,
+            closing: false,
         });
 
         assert!(queue.remove_toast(first));
@@ -987,6 +1048,7 @@ mod snackbar_queue_tests {
         let id = queue.push_toast(SnackbarNotice {
             text: "first".to_owned(),
             level: 2,
+            closing: false,
         });
         let expected_stack = queue.visible_toasts();
         let expected_ids = queue.ids.clone();

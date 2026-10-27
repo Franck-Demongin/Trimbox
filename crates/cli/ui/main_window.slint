@@ -4,6 +4,7 @@ struct SnackbarItem {
     text: string,
     level: int,
     id: int,
+    closing: bool,
 }
 
 global Theme {
@@ -27,13 +28,28 @@ component Snackbar inherits Rectangle {
     in property <int> level: 0;
     in property <int> id: 0;
 
+    in property <bool> closing: false;
+    property <bool> entered: false;
+    init => { root.entered = true; }
+
     callback close-requested();
 
     background: self.level == 2 ? #e53935 : (self.level == 1 ? #f08c00 : #2e9f54);
     border-color: self.level == 2 ? #9b000e : (self.level == 1 ? #a66100 : #1d6f3a);
     border-width: 1px;
     border-radius: Theme.corner-radius;
-    height: self.preferred-height;
+    opacity: !root.closing && root.entered ? 1.0 : 0.0;
+    height: !root.closing && root.entered ? self.preferred-height : 0px;
+    clip: true;
+
+    animate opacity {
+        duration: 200ms;
+        easing: ease-in-out;
+    }
+    animate height {
+        duration: 200ms;
+        easing: ease-in-out;
+    }
 
     HorizontalBox {
         padding: Theme.spacing;
@@ -68,6 +84,7 @@ component Snackbar inherits Rectangle {
             TouchArea {
                 width: 24px;
                 height: 24px;
+                enabled: !root.closing;
                 clicked => {
                     root.close-requested();
                 }
@@ -320,6 +337,7 @@ export component MainWindow inherits Window {
                 text: root.snackbar-items[root.snackbar-items.length - 1 - i].text;
                 level: root.snackbar-items[root.snackbar-items.length - 1 - i].level;
                 id: root.snackbar-items[root.snackbar-items.length - 1 - i].id;
+                closing: root.snackbar-items[root.snackbar-items.length - 1 - i].closing;
                 close-requested => { root.close-snackbar(self.id); }
             }
         }
