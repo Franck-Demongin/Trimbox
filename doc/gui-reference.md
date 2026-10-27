@@ -326,7 +326,11 @@ Règles :
 
 ## 7. Composant Slint `Snackbar`
 
-C'est un composant réellement exporté au niveau du fichier. Il reste compact, fermable, et se fie à une palette sémantique vive.
+Ce composant est extrait dans `crates/cli/ui/snackbar.slint` et importé par
+`crates/cli/ui/main_window.slint` via `import { Snackbar, SnackbarItem } from "snackbar.slint";`.
+Il reste compact, fermable, et se fie à une palette sémantique vive. Ses couleurs sont
+autonomes, tandis que l'espacement et le rayon sont des propriétés (`spacing`,
+`corner-radius`) avec les mêmes valeurs par défaut.
 
 ### 7.1 Extrait à réutiliser
 
@@ -425,7 +429,8 @@ Règles :
 
 ## 8. Comportement des toasts côté Rust
 
-Le cœur applicatif associe la présentation Slint à une file simple. Les détails sont dans `crates/cli/src/gui.rs`.
+Le cœur applicatif associe la présentation Slint à une file simple. Les détails sont
+dans `crates/cli/src/toast.rs` et dans `crates/cli/ui/snackbar.slint`.
 
 | Contrat | Valeur |
 |---|---|
