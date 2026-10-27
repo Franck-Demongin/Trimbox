@@ -234,6 +234,7 @@ export component MainWindow inherits Window {
                 HorizontalBox {
                     spacing: Theme.spacing;
                     vertical-stretch: 0;
+                    padding: 0px;
                     Text { text: "Largeur crop (mm)"; vertical-alignment: center; }
                     Text { text: "Hauteur crop (mm)"; vertical-alignment: center; }
                 }
@@ -241,6 +242,7 @@ export component MainWindow inherits Window {
                 HorizontalBox {
                     spacing: Theme.spacing;
                     vertical-stretch: 0;
+                    padding: 0px;
                     LineEdit { text <=> root.crop-width-mm; placeholder-text: "85"; horizontal-stretch: 1; min-width: Theme.crop-field-min-width; }
                     LineEdit { text <=> root.crop-height-mm; placeholder-text: "55"; horizontal-stretch: 1; min-width: Theme.crop-field-min-width; }
                 }
