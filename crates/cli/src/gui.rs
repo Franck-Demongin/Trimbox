@@ -623,10 +623,16 @@ impl SnackbarQueue {
 
     fn push_toast(&mut self, notice: SnackbarNotice) -> u32 {
         const MAX_VISIBLE_TOASTS: usize = 3;
-        while self.stack.len() >= MAX_VISIBLE_TOASTS {
-            self.stack.pop_front();
-            self.ids.pop_front();
+
+        // A new toast first displaces the oldest active toast by marking it as
+        // closing, instead of deleting it immediately. The actual final removal
+        // is scheduled by the UI path after the fade-out/collapse animation.
+        if self.active_toast_count() >= MAX_VISIBLE_TOASTS
+            && let Some(evicted_id) = self.oldest_active_toast_id()
+        {
+            let _started = self.begin_toast_closing(evicted_id);
         }
+
         let id = self.next_id;
         self.next_id = self.next_id.wrapping_add(1);
         self.stack.push_back(notice);
@@ -685,20 +691,66 @@ impl SnackbarQueue {
         }
     }
 
+    fn active_toast_count(&self) -> usize {
+        self.stack.iter().filter(|notice| !notice.closing).count()
+    }
+
+    fn oldest_active_toast_id(&self) -> Option<u32> {
+        self.ids
+            .iter()
+            .copied()
+            .zip(self.stack.iter())
+            .find_map(|(id, notice)| (!notice.closing).then_some(id))
+    }
+
     fn visible_toasts(&self) -> Vec<SnackbarNotice> {
         self.stack.iter().cloned().collect()
     }
 }
 
 fn enqueue_snackbar(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>, text: String, level: i32) {
+    const MAX_VISIBLE_TOASTS: usize = 3;
+    const TOAST_DISMISS_ANIMATION_DURATION: Duration = Duration::from_millis(200);
+
+    let active_count = state.borrow().active_toast_count();
+    let oldest_active_id = state.borrow().oldest_active_toast_id();
+    let evicted_id = if active_count >= MAX_VISIBLE_TOASTS {
+        oldest_active_id
+    } else {
+        None
+    };
+
+    // Mark the evicted toast before appending the new one, so push_toast can
+    // observe the reduced active count and does not schedule a second eviction.
+    let eviction_started = if let Some(evicted_id) = evicted_id {
+        state.borrow_mut().begin_toast_closing(evicted_id)
+    } else {
+        false
+    };
+
     let notice = SnackbarNotice {
         text,
         level,
         closing: false,
     };
     let id = state.borrow_mut().push_toast(notice);
+
     sync_snackbar_stack(ui, state);
+
     schedule_auto_dismiss(ui.as_weak(), state.clone(), id);
+
+    if eviction_started && let Some(evicted_id) = evicted_id {
+        let ui = ui.as_weak();
+        let state = state.clone();
+        slint::Timer::single_shot(TOAST_DISMISS_ANIMATION_DURATION, move || {
+            if let Some(ui) = ui.upgrade() {
+                let removed = state.borrow_mut().finalize_toast_removal(evicted_id);
+                if removed {
+                    sync_snackbar_stack(&ui, &state);
+                }
+            }
+        });
+    }
 }
 
 fn sync_snackbar_stack(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>) {
@@ -980,9 +1032,9 @@ mod snackbar_queue_tests {
     }
 
     #[test]
-    fn toast_stack_caps_at_three_and_removes_oldest() {
+    fn toast_stack_begins_animated_eviction_at_three() {
         let mut queue = SnackbarQueue::default();
-        queue.push_toast(SnackbarNotice {
+        let first = queue.push_toast(SnackbarNotice {
             text: "first".to_owned(),
             level: 0,
             closing: false,
@@ -1003,8 +1055,30 @@ mod snackbar_queue_tests {
             closing: false,
         });
 
+        assert_eq!(queue.stack.len(), 4);
+        assert_eq!(queue.ids.len(), 4);
+        assert_eq!(
+            queue
+                .visible_toasts()
+                .iter()
+                .map(|item| item.text.clone())
+                .collect::<Vec<_>>(),
+            vec!["first", "second", "third", "fourth"]
+        );
+        assert!(queue.stack[0].closing);
+        assert!(!queue.stack[1].closing);
+        assert!(!queue.stack[2].closing);
+        assert!(!queue.stack[3].closing);
+        assert_eq!(
+            queue.ids.iter().copied().collect::<Vec<_>>(),
+            vec![first, second, third, fourth]
+        );
+        assert_eq!(third, 2);
+        assert_eq!(fourth, 3);
+        assert!(!queue.begin_toast_closing(first));
+        assert_eq!(queue.stack.len(), 4);
+        assert!(queue.finalize_toast_removal(first));
         assert_eq!(queue.stack.len(), 3);
-        assert_eq!(queue.ids.len(), 3);
         assert_eq!(
             queue
                 .visible_toasts()
@@ -1017,8 +1091,25 @@ mod snackbar_queue_tests {
             queue.ids.iter().copied().collect::<Vec<_>>(),
             vec![second, third, fourth]
         );
-        assert_eq!(third, 2);
-        assert_eq!(fourth, 3);
+    }
+
+    #[test]
+    fn toast_close_is_two_phase() {
+        let mut queue = SnackbarQueue::default();
+        let id = queue.push_toast(SnackbarNotice {
+            text: "first".to_owned(),
+            level: 2,
+            closing: false,
+        });
+
+        assert!(queue.begin_toast_closing(id));
+        assert_eq!(queue.stack.len(), 1);
+        assert!(queue.stack[0].closing);
+        assert!(!queue.begin_toast_closing(id));
+        assert!(!queue.finalize_toast_removal(id.wrapping_add(1)));
+        assert!(queue.finalize_toast_removal(id));
+        assert!(queue.stack.is_empty());
+        assert!(queue.ids.is_empty());
     }
 
     #[test]
