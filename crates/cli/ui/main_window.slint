@@ -1,5 +1,5 @@
 import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, StandardButton, Palette } from "std-widgets.slint";
-import { Snackbar, SnackbarItem } from "snackbar.slint";
+import { Snackbar, SnackbarItem, SnackbarOverlay } from "snackbar.slint";
 
 global Theme {
     out property <length> spacing: 8px;
@@ -247,24 +247,11 @@ export component MainWindow inherits Window {
         }
     }
 
-    Rectangle {
-        visible: root.snackbar-items.length > 0;
-        width: min(360px, max(0px, root.width - Theme.spacing * 4));
-        height: self.preferred-height;
-        x: max(Theme.spacing * 2, root.width - self.width - Theme.spacing * 2);
-        y: Theme.spacing * 2;
-        background: transparent;
-
-        VerticalBox {
-            spacing: Theme.spacing;
-            for i in root.snackbar-items.length : Snackbar {
-                text: root.snackbar-items[root.snackbar-items.length - 1 - i].text;
-                level: root.snackbar-items[root.snackbar-items.length - 1 - i].level;
-                id: root.snackbar-items[root.snackbar-items.length - 1 - i].id;
-                closing: root.snackbar-items[root.snackbar-items.length - 1 - i].closing;
-                close-requested => { root.close-snackbar(self.id); }
-            }
-        }
+    SnackbarOverlay {
+        items: root.snackbar-items;
+        available-width: root.width;
+        spacing: Theme.spacing;
+        close-requested(id) => { root.close-snackbar(id); }
     }
 
     report_popup := PopupWindow {

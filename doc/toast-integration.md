@@ -3,7 +3,7 @@
 Cette note explique comment porter le système de toasts actuel dans un autre
 projet Rust + Slint sans introduire une crate lourde. Les valeurs du
 comportement restent identiques : nouveau toast en haut, 3 visibles
-maximum, éviction animée, auto-disparition à 4 secondes, transition de 200 ms.
+maximum, éviction animée, auto-disparition à 4 secondes, transition d'opacité de 1 seconde et de hauteur de 200 ms.
 
 ## 1. Fichiers source
 
@@ -21,43 +21,35 @@ Dans le fichier principal de l'interface :
 
 ```slint
 import { VerticalBox } from "std-widgets.slint";
-import { Snackbar, SnackbarItem } from "snackbar.slint";
+import { Snackbar, SnackbarItem, SnackbarOverlay } from "snackbar.slint";
 
 in-out property <[SnackbarItem]> snackbar-items: [];
 
 callback close-snackbar(int);
 ```
 
-Conserver un overlay supérieur droit au moins équivalent à :
+Conserver l'overlay supérieur droit à l'aide du composant réutilisable :
 
 ```slint
-Rectangle {
-    visible: root.snackbar-items.length > 0;
-    width: min(360px, max(0px, root.width - 16px));
-    height: self.preferred-height;
-    x: max(8px, root.width - self.width - 8px);
-    y: 8px;
-    background: transparent;
-
-    VerticalBox {
-        spacing: 8px;
-        for i in root.snackbar-items.length : Snackbar {
-            text: root.snackbar-items[root.snackbar-items.length - 1 - i].text;
-            level: root.snackbar-items[root.snackbar-items.length - 1 - i].level;
-            id: root.snackbar-items[root.snackbar-items.length - 1 - i].id;
-            closing: root.snackbar-items[root.snackbar-items.length - 1 - i].closing;
-            close-requested => { root.close-snackbar(self.id); }
-        }
-    }
+SnackbarOverlay {
+    items: root.snackbar-items;
+    available-width: root.width;
+    spacing: 8px;
+    close-requested(id) => { root.close-snackbar(id); }
 }
 ```
+
+Le composant encapsule la géométrie (largeur maximale 360 px, marges, position en haut à
+droite), l'empilement inversé et la transmission de `close-requested`. Il utilise ses
+valeurs par défaut si aucun thème n'est fourni ; pour réutiliser les jetons d'un projet,
+passer `spacing` (et la largeur disponible de l'hôte via `available-width`).
 
 Points conservés volontairement :
 
 - la couleur sémantique vit dans `Snackbar` et ne dépend pas du thème ;
 - `spacing` et `corner-radius` peuvent rester à leurs valeurs par défaut ;
 - le badge de fermeture est une `TouchArea` sur une pastille 24x24 ;
-- la disparition utilise `opacity` et `height` animées sur 200 ms.
+- la disparition utilise une animation d'`opacity` de 1000 ms et de `height` de 200 ms.
 - le modèle est écrit de façon à ce que les nouveaux toasts apparaissent en haut.
 
 ## 3. Partie Rust

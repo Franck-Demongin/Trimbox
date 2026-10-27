@@ -1,4 +1,4 @@
-import { HorizontalBox } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export struct SnackbarItem {
     text: string,
@@ -34,7 +34,7 @@ export component Snackbar inherits Rectangle {
         easing: ease-in-out;
     }
     animate height {
-        duration: 1000ms;
+        duration: 200ms;
         easing: ease-in-out;
     }
 
@@ -76,6 +76,32 @@ export component Snackbar inherits Rectangle {
                     root.close-requested();
                 }
             }
+        }
+    }
+}
+
+export component SnackbarOverlay inherits Rectangle {
+    in property <[SnackbarItem]> items;
+    in property <length> available-width: 860px;
+    in property <length> spacing: 8px;
+
+    callback close-requested(int);
+
+    visible: root.items.length > 0;
+    width: min(360px, max(0px, root.available-width - root.spacing * 4));
+    height: self.preferred-height;
+    x: max(root.spacing * 2, root.available-width - self.width - root.spacing * 2);
+    y: root.spacing * 2;
+    background: transparent;
+
+    VerticalBox {
+        spacing: root.spacing;
+        for i in root.items.length : Snackbar {
+            text: root.items[root.items.length - 1 - i].text;
+            level: root.items[root.items.length - 1 - i].level;
+            id: root.items[root.items.length - 1 - i].id;
+            closing: root.items[root.items.length - 1 - i].closing;
+            close-requested => { root.close-requested(self.id); }
         }
     }
 }
