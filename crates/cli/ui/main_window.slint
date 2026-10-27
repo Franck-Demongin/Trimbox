@@ -250,9 +250,14 @@ export component MainWindow inherits Window {
             vertical-stretch: 1;
         }
 
+        Rectangle {
+            height: 1px;
+            horizontal-stretch: 1;
+            background: Palette.border;
+        }
+
         HorizontalBox {
             spacing: Theme.spacing;
-            alignment: end;
             vertical-stretch: 0;
 
             if root.report-available : Button {
@@ -282,6 +287,10 @@ export component MainWindow inherits Window {
                 colorize-icon: true;
                 horizontal-stretch: 0;
                 clicked => { root.open-output-folder(); }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
             }
 
             Button {
