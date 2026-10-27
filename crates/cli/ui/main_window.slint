@@ -55,15 +55,13 @@ component Snackbar inherits Rectangle {
             border-radius: 12px;
             background: root.level == 2 ? #9b000e : (root.level == 1 ? #a66100 : #1d6f3a);
 
-            Text {
-                width: 24px;
-                height: 24px;
-                text: "×";
-                color: #ffffff;
-                font-size: 18px;
-                font-weight: 700;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            Image {
+                x: 5px;
+                y: 5px;
+                width: 14px;
+                height: 14px;
+                source: @image-url("../../../assets/icons/ui/close.svg");
+                image-fit: contain;
             }
 
             TouchArea {
@@ -175,7 +173,14 @@ export component MainWindow inherits Window {
                     alignment: stretch;
                     vertical-stretch: 0;
                     LineEdit { text <=> root.source-path; placeholder-text: "Chemin du PDF source"; horizontal-stretch: 1; }
-                    Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-source(); } }
+                    Button {
+                        text: "Parcourir...";
+                        icon: @image-url("../../../assets/icons/ui/document-open.svg");
+                        icon-size: 16px;
+                        colorize-icon: true;
+                        horizontal-stretch: 0;
+                        clicked => { root.browse-source(); }
+                    }
                 }
             }
         }
@@ -203,7 +208,14 @@ export component MainWindow inherits Window {
                     alignment: stretch;
                     vertical-stretch: 0;
                     LineEdit { text <=> root.output-path; placeholder-text: "Chemin du PDF généré"; horizontal-stretch: 1; }
-                    Button { text: "Parcourir..."; horizontal-stretch: 0; clicked => { root.browse-output(); } }
+                    Button {
+                        text: "Parcourir...";
+                        icon: @image-url("../../../assets/icons/ui/folder-open.svg");
+                        icon-size: 16px;
+                        colorize-icon: true;
+                        horizontal-stretch: 0;
+                        clicked => { root.browse-output(); }
+                    }
                 }
             }
         }
@@ -250,6 +262,9 @@ export component MainWindow inherits Window {
 
             if root.report-available : Button {
                 text: "Rapport";
+                icon: @image-url("../../../assets/icons/ui/document-properties.svg");
+                icon-size: 16px;
+                colorize-icon: true;
                 horizontal-stretch: 0;
                 clicked => {
                     root.open-report();
@@ -258,12 +273,18 @@ export component MainWindow inherits Window {
 
             if root.output-available : Button {
                 text: "Ouvrir le fichier";
+                icon: @image-url("../../../assets/icons/ui/document-open.svg");
+                icon-size: 16px;
+                colorize-icon: true;
                 horizontal-stretch: 0;
                 clicked => { root.open-output(); }
             }
 
             if root.output-available : Button {
                 text: "Ouvrir le dossier";
+                icon: @image-url("../../../assets/icons/ui/folder-open.svg");
+                icon-size: 16px;
+                colorize-icon: true;
                 horizontal-stretch: 0;
                 clicked => { root.open-output-folder(); }
             }
