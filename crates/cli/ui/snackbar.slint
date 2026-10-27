@@ -30,24 +30,18 @@ export component Snackbar inherits Rectangle {
     clip: true;
 
     animate opacity {
-        duration: 350ms;
+        duration: 200ms;
         easing: ease-in-out;
     }
     animate height {
-        duration: 350ms;
+        duration: 200ms;
         easing: ease-in-out;
     }
 
     HorizontalBox {
         padding: root.spacing;
-        padding-left: root.closing ? parent.width : 0px;
         spacing: root.spacing;
         alignment: stretch;
-
-        animate padding-left {
-            duration: 350ms;
-            easing: ease-in-out;
-        }
 
         Text {
             text: root.text;
