@@ -31,6 +31,9 @@ serde_json = { version = "1", default-features = true, optional = true }
 [build-dependencies]
 slint-build = { workspace = true, optional = true }
 
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
 [dev-dependencies]
 lopdf.workspace = true
 tempfile = "3"
