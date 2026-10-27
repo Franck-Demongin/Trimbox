@@ -129,7 +129,7 @@ pub fn enqueue_snackbar(
     level: i32,
 ) {
     const MAX_VISIBLE_TOASTS: usize = 3;
-    const TOAST_DISMISS_ANIMATION_DURATION: Duration = Duration::from_millis(200);
+    const TOAST_DISMISS_ANIMATION_DURATION: Duration = Duration::from_millis(350);
 
     let active_count = state.borrow().active_toast_count();
     let oldest_active_id = state.borrow().oldest_active_toast_id();
@@ -189,7 +189,7 @@ pub fn sync_snackbar_stack(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>) 
 }
 
 pub fn dismiss_snackbar(ui: &MainWindow, state: &Rc<RefCell<SnackbarQueue>>, toast_id: i32) {
-    const TOAST_DISMISS_ANIMATION_DURATION: Duration = Duration::from_millis(200);
+    const TOAST_DISMISS_ANIMATION_DURATION: Duration = Duration::from_millis(350);
 
     let id = toast_id as u32;
     let started = state.borrow_mut().begin_toast_closing(id);

@@ -733,4 +733,3 @@ mod report_format_tests {
         );
     }
 }
-

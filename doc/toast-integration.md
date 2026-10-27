@@ -3,7 +3,7 @@
 Cette note explique comment porter le système de toasts actuel dans un autre
 projet Rust + Slint sans introduire une crate lourde. Les valeurs du
 comportement restent identiques : nouveau toast en haut, 3 visibles
-maximum, éviction animée, auto-disparition à 4 secondes, transition de 200 ms.
+maximum, éviction animée, auto-disparition à 4 secondes, transition de 350 ms.
 
 ## 1. Fichiers source
 
@@ -57,7 +57,7 @@ Points conservés volontairement :
 - la couleur sémantique vit dans `Snackbar` et ne dépend pas du thème ;
 - `spacing` et `corner-radius` peuvent rester à leurs valeurs par défaut ;
 - le badge de fermeture est une `TouchArea` sur une pastille 24x24 ;
-- la disparition utilise `opacity` et `height` animées sur 200 ms.
+- la disparition utilise `opacity` et `height` animées sur 350 ms.
 - le modèle est écrit de façon à ce que les nouveaux toasts apparaissent en haut.
 
 ## 3. Partie Rust
