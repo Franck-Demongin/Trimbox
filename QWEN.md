@@ -14,6 +14,8 @@ Trimbox lit des documents PDF et prépare le travail autour de PDF/X-4. Le noyau
 - `trimbox-cli/ui/main_window.slint` : vue traitée par `slint-build` dans `build.rs`.
 - Le fichier `.slint` est racine du traité, la logique reste côté Rust.
 - `slint::set_xdg_app_id` est appelé après création de la fenêtre.
+- Notifications toast réutilisables : `doc/toast-integration.md`.
+- Référence visuelle GUI : `doc/gui-reference.md`.
 
 ## Compilation
 
@@ -27,6 +29,12 @@ Compilation de l'interface graphique :
 
 ```sh
 cargo build -p trimbox-cli --features gui --bin trimbox-gui
+```
+
+Lancement de l'interface graphique :
+
+```sh
+cargo run -p trimbox-cli --features gui --bin trimbox-gui
 ```
 
 Compilation complète de la workspace :
@@ -68,6 +76,8 @@ sudo apt-get install -y build-essential pkg-config \
 
 - Identifiant d'application : `io.github.Franck-Demongin.Trimbox`
 - Bureau : `packaging/linux/io.github.Franck-Demongin.Trimbox.desktop`
+- Installation locale : `packaging/linux/install-local.sh` après `cargo install --path crates/cli --features gui`
+- Icônes installées sous `io.github.Franck-Demongin.Trimbox` dans `~/.local/share/icons/hicolor`
 - La sélection de l'identifiant est faite après la création du composant, avant l'affichage.
 
 ## Arborescence
@@ -76,7 +86,9 @@ sudo apt-get install -y build-essential pkg-config \
 Cargo.toml
 crates/core
 crates/cli
-packaging/linux/trimbox.desktop
+packaging/linux/io.github.Franck-Demongin.Trimbox.desktop
+packaging/linux/install-local.sh
+packaging/linux/uninstall-local.sh
 README.md
 QWEN.md
 ```
