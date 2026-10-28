@@ -1,5 +1,6 @@
 import { VerticalBox, HorizontalBox, Button, LineEdit, ScrollView, StandardButton, Palette } from "std-widgets.slint";
-import { Snackbar, SnackbarItem, SnackbarOverlay } from "snackbar.slint";
+import { Toast, ToastItem, ToastTiming, ToastState, ToastOverlay } from "toast/toast.slint";
+export { ToastTiming, ToastState } from "toast/toast.slint";
 
 global Theme {
     out property <length> spacing: 8px;
@@ -33,7 +34,6 @@ export component MainWindow inherits Window {
     in property <string> source-size: "";
     in property <bool> output-available: false;
     in property <bool> report-available: false;
-    in-out property <[SnackbarItem]> snackbar-items: [];
     in property <string> window-title: "Trimbox";
 
     in-out property <bool> report-visible: false;
@@ -46,8 +46,6 @@ export component MainWindow inherits Window {
 
     callback open-report();
     callback close-report();
-
-    callback close-snackbar(int);
 
     open-report => {
         report_popup.show();
@@ -256,11 +254,9 @@ export component MainWindow inherits Window {
         }
     }
 
-    SnackbarOverlay {
-        items: root.snackbar-items;
+    ToastOverlay {
         available-width: root.width;
         spacing: Theme.spacing;
-        close-requested(id) => { root.close-snackbar(id); }
     }
 
     report_popup := PopupWindow {

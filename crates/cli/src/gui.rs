@@ -1,13 +1,13 @@
 #![cfg(feature = "gui")]
 
-use crate::toast::{SnackbarQueue, dismiss_snackbar, enqueue_snackbar};
+mod toast;
+use toast::{ToastLevel, Toaster};
+
 use anyhow::{Context, Result};
 use slint::ComponentHandle;
-use std::cell::RefCell;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::rc::Rc;
 
 use trimbox_core::crop::crop_document;
 use trimbox_core::pdf::{load_document, save_document};
@@ -25,18 +25,10 @@ pub fn run() -> Result<()> {
 
     let weak = ui.as_weak();
 
-    let snackbar_state = Rc::new(RefCell::new(SnackbarQueue::default()));
-
-    let close_snackbar_weak = weak.clone();
-    let close_snackbar_state = snackbar_state.clone();
-    ui.on_close_snackbar(move |toast_id| {
-        if let Some(ui) = close_snackbar_weak.upgrade() {
-            dismiss_snackbar(&ui, &close_snackbar_state, toast_id);
-        }
-    });
+    let toaster = Toaster::install(&ui);
 
     let browse_source_weak = weak.clone();
-    let browse_snackbar_state = snackbar_state.clone();
+    let browse_toaster = toaster.clone();
     ui.on_browse_source(move || {
         if let Some(ui) = browse_source_weak.upgrade() {
             let dialog = rfd::FileDialog::new()
@@ -67,7 +59,7 @@ pub fn run() -> Result<()> {
                 ui.set_output_available(false);
                 ui.set_report_available(false);
                 ui.set_source_size(source_size.into());
-                set_status(&ui, &browse_snackbar_state, "Source chargée.".to_owned(), 0);
+                set_status(&ui, &browse_toaster, "Source chargée.".to_owned(), 0);
             }
         }
     });
@@ -86,26 +78,26 @@ pub fn run() -> Result<()> {
     });
 
     let crop_weak = weak.clone();
-    let crop_snackbar_state = snackbar_state.clone();
+    let crop_toaster = toaster.clone();
     ui.on_crop(move || {
         if let Some(ui) = crop_weak.upgrade() {
-            crop_document_gui(&ui, &crop_snackbar_state);
+            crop_document_gui(&ui, &crop_toaster);
         }
     });
 
     let open_weak = weak.clone();
-    let open_snackbar_state = snackbar_state.clone();
+    let open_toaster = toaster.clone();
     ui.on_open_output(move || {
         if let Some(ui) = open_weak.upgrade() {
-            open_output_gui(&ui, false, &open_snackbar_state);
+            open_output_gui(&ui, false, &open_toaster);
         }
     });
 
     let open_folder_weak = weak.clone();
-    let open_folder_snackbar_state = snackbar_state.clone();
+    let open_folder_toaster = toaster.clone();
     ui.on_open_output_folder(move || {
         if let Some(ui) = open_folder_weak.upgrade() {
-            open_output_gui(&ui, true, &open_folder_snackbar_state);
+            open_output_gui(&ui, true, &open_folder_toaster);
         }
     });
 
@@ -114,8 +106,7 @@ pub fn run() -> Result<()> {
     Ok(())
 }
 
-fn crop_document_gui(ui: &MainWindow, snackbar_state: &Rc<RefCell<SnackbarQueue>>) {
-    let state = snackbar_state;
+fn crop_document_gui(ui: &MainWindow, toaster: &Toaster) {
     ui.set_output_available(false);
     ui.set_report_available(false);
 
@@ -123,7 +114,7 @@ fn crop_document_gui(ui: &MainWindow, snackbar_state: &Rc<RefCell<SnackbarQueue>
     if input.is_empty() {
         set_status(
             ui,
-            state,
+            toaster,
             "Choisir d'abord un fichier source.".to_owned(),
             2,
         );
@@ -132,14 +123,14 @@ fn crop_document_gui(ui: &MainWindow, snackbar_state: &Rc<RefCell<SnackbarQueue>
     let width = match ui.get_crop_width_mm().as_str().trim().parse::<f64>() {
         Ok(value) if value.is_finite() && value > 0.0 => value,
         _ => {
-            set_status(ui, state, "Largeur de recadrage invalide.".to_owned(), 2);
+            set_status(ui, toaster, "Largeur de recadrage invalide.".to_owned(), 2);
             return;
         }
     };
     let height = match ui.get_crop_height_mm().as_str().trim().parse::<f64>() {
         Ok(value) if value.is_finite() && value > 0.0 => value,
         _ => {
-            set_status(ui, state, "Hauteur de recadrage invalide.".to_owned(), 2);
+            set_status(ui, toaster, "Hauteur de recadrage invalide.".to_owned(), 2);
             return;
         }
     };
@@ -164,7 +155,7 @@ fn crop_document_gui(ui: &MainWindow, snackbar_state: &Rc<RefCell<SnackbarQueue>
     if same_path(&input_path, &output) {
         set_status(
             ui,
-            state,
+            toaster,
             "Le fichier de sortie doit differer du fichier source.".to_owned(),
             2,
         );
@@ -176,14 +167,14 @@ fn crop_document_gui(ui: &MainWindow, snackbar_state: &Rc<RefCell<SnackbarQueue>
     {
         Ok(bytes) => bytes,
         Err(error) => {
-            set_status(ui, state, error.to_string(), 2);
+            set_status(ui, toaster, error.to_string(), 2);
             return;
         }
     };
     let mut document = match load_document(&bytes) {
         Ok(document) => document,
         Err(error) => {
-            set_status(ui, state, format!("PDF illisible : {error}"), 2);
+            set_status(ui, toaster, format!("PDF illisible : {error}"), 2);
             return;
         }
     };
@@ -205,7 +196,7 @@ fn crop_document_gui(ui: &MainWindow, snackbar_state: &Rc<RefCell<SnackbarQueue>
                 format!("Recadrage impossible : {error}"),
                 "Recadrage impossible.".to_owned(),
                 2,
-                state,
+                toaster,
             );
             return;
         }
@@ -214,13 +205,18 @@ fn crop_document_gui(ui: &MainWindow, snackbar_state: &Rc<RefCell<SnackbarQueue>
     let saved_bytes = match save_document(&mut document) {
         Ok(bytes) => bytes,
         Err(error) => {
-            set_status(ui, state, format!("Serialisation impossible : {error}"), 2);
+            set_status(
+                ui,
+                toaster,
+                format!("Serialisation impossible : {error}"),
+                2,
+            );
             return;
         }
     };
 
     if let Err(error) = fs::write(&output, saved_bytes) {
-        set_status(ui, state, format!("Ecriture impossible : {error}"), 2);
+        set_status(ui, toaster, format!("Ecriture impossible : {error}"), 2);
         return;
     }
 
@@ -243,7 +239,7 @@ fn crop_document_gui(ui: &MainWindow, snackbar_state: &Rc<RefCell<SnackbarQueue>
         format_crop_summary(&report, &validation, output_size),
         status,
         level,
-        state,
+        toaster,
     );
 }
 
@@ -478,23 +474,27 @@ fn set_report(
     report: String,
     status: impl Into<slint::SharedString>,
     level: i32,
-    snackbar_state: &Rc<RefCell<SnackbarQueue>>,
+    toaster: &Toaster,
 ) {
-    let state = snackbar_state;
     ui.set_report_title(title.into());
     let report = format_report_body("report", &report);
     ui.set_report(report.into());
     ui.set_report_available(true);
-    set_status(ui, state, status, level);
+    set_status(ui, toaster, status, level);
 }
 
 fn set_status(
-    ui: &MainWindow,
-    state: &Rc<RefCell<SnackbarQueue>>,
+    _ui: &MainWindow,
+    toaster: &Toaster,
     status: impl Into<slint::SharedString>,
     level: i32,
 ) {
-    enqueue_snackbar(ui, state, status.into().as_str().to_owned(), level);
+    let level = match level {
+        1 => ToastLevel::Warning,
+        2 => ToastLevel::Error,
+        _ => ToastLevel::Success,
+    };
+    toaster.show(status.into().as_str().to_owned(), level);
 }
 
 fn source_path(ui: &MainWindow) -> String {
@@ -525,8 +525,7 @@ fn same_path(left: &Path, right: &Path) -> bool {
     }
 }
 
-fn open_output_gui(ui: &MainWindow, folder: bool, snackbar_state: &Rc<RefCell<SnackbarQueue>>) {
-    let state = snackbar_state;
+fn open_output_gui(ui: &MainWindow, folder: bool, toaster: &Toaster) {
     let path = output_path(ui);
     if path.is_empty() {
         return;
@@ -540,7 +539,7 @@ fn open_output_gui(ui: &MainWindow, folder: bool, snackbar_state: &Rc<RefCell<Sn
         path
     };
     if let Err(error) = open_system_path(&target) {
-        set_status(ui, state, format!("Ouverture impossible : {error}"), 2);
+        set_status(ui, toaster, format!("Ouverture impossible : {error}"), 2);
     }
 }
 
