@@ -105,15 +105,15 @@ Ne pas réintroduire des valeurs codées en dur de type `#f7f7f7`, `#9a9a9a` ou 
 
 Les toasts ne suivent pas les nuances neutres du thème. Ils utilisent des couleurs vives non pastel avec texte à fort contraste.
 
-| Niveau | Signification | Barre | Bordure et badge de fermeture | Texte |
-|---:|---|---|---|---|
-| 0 | succès / info | `#2e9f54` | `#1d6f3a` | `#ffffff` |
-| 1 | avertissement | `#f08c00` | `#a66100` | `#111111` |
-| 2 | erreur | `#e53935` | `#9b000e` | `#ffffff` |
+| Niveau | Signification | Barre | Bordure | Badge de fermeture | Texte |
+|---:|---|---|---|---|---|
+| 0 | succès / info | `#17793a` | `#1d6f3a` | `#115227` | `#f6f5f4` |
+| 1 | avertissement | `#d98611` | `#a66100` | `#a66100` | `#241f31` |
+| 2 | erreur | `#c01c28` | `#9b000e` | `#9b000e` | `#f6f5f4` |
 
 Règles complémentaires :
 
-- le badge de fermeture d'un toast est une pastille circulaire 24x24, couleur de bordure associée, avec `×` blanc ;
+- le badge de fermeture d'un toast est une pastille circulaire 24x24, couleur de fermeture associée, avec `×` blanc ;
 - le texte du toast conserve `wrap: word-wrap` ;
 - la largeur maximale reste `360px` ;
 - l'icône et le badge restent alignés dans une `HorizontalBox` ;
@@ -342,7 +342,7 @@ component Snackbar inherits Rectangle {
 
     callback close-requested();
 
-    background: self.level == 2 ? #e53935 : (self.level == 1 ? #f08c00 : #2e9f54);
+    background: self.level == 2 ? #c01c28 : (self.level == 1 ? #d98611 : #17793a);
     border-color: self.level == 2 ? #9b000e : (self.level == 1 ? #a66100 : #1d6f3a);
     border-width: 1px;
     border-radius: Theme.corner-radius;
@@ -355,7 +355,7 @@ component Snackbar inherits Rectangle {
 
         Text {
             text: root.text;
-            color: root.level == 2 ? #ffffff : (root.level == 1 ? #111111 : #ffffff);
+            color: root.level == 2 ? #f6f5f4 : (root.level == 1 ? #241f31 : #f6f5f4);
             wrap: word-wrap;
             horizontal-alignment: left;
             vertical-alignment: top;
@@ -367,7 +367,7 @@ component Snackbar inherits Rectangle {
             height: 24px;
             horizontal-stretch: 0;
             border-radius: 12px;
-            background: root.level == 2 ? #9b000e : (root.level == 1 ? #a66100 : #1d6f3a);
+            background: root.level == 2 ? #9b000e : (root.level == 1 ? #a66100 : #115227);
 
             Image {
                 x: 5px;

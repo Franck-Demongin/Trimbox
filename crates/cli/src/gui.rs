@@ -67,9 +67,22 @@ pub fn run() -> Result<()> {
     let browse_output_weak = weak.clone();
     ui.on_browse_output(move || {
         if let Some(ui) = browse_output_weak.upgrade() {
-            let dialog = rfd::FileDialog::new()
+            let mut dialog = rfd::FileDialog::new()
                 .add_filter("PDF", &["pdf"])
                 .set_title("Enregistrer le PDF généré");
+
+            // Proposer un nom basé sur la source chargée, si elle existe.
+            let source = source_path(&ui);
+            if !source.is_empty() {
+                let suggested = default_output_path(std::path::Path::new(&source), "recadre");
+                if let Some(parent) = suggested.parent() {
+                    dialog = dialog.set_directory(parent);
+                }
+                if let Some(file_name) = suggested.file_name().and_then(|value| value.to_str()) {
+                    dialog = dialog.set_file_name(file_name.to_owned());
+                }
+            }
+
             if let Some(path) = dialog.save_file() {
                 let normalized = ensure_pdf_extension(path);
                 ui.set_output_path(normalized.display().to_string().into());
@@ -137,20 +150,45 @@ fn crop_document_gui(ui: &MainWindow, toaster: &Toaster) {
 
     let input_path = PathBuf::from(input);
     let source = input_path.display().to_string();
-    let fallback = PathBuf::from(format!(
-        "{}-recadre-{}x{}mm.pdf",
-        input_path.file_stem().unwrap_or_default().to_string_lossy(),
-        width,
-        height
-    ));
-    let output = ensure_pdf_extension({
-        let current = output_path(ui);
-        if current.is_empty() {
-            fallback
-        } else {
-            PathBuf::from(current)
+
+    let current = output_path(ui).trim().to_owned();
+    if current.is_empty() {
+        set_status(
+            ui,
+            toaster,
+            "Choisir d'abord un fichier de sortie.".to_owned(),
+            2,
+        );
+        return;
+    }
+
+    let requested = PathBuf::from(current);
+    let resolved = if requested
+        .parent()
+        .map(|parent| parent.as_os_str().is_empty())
+        .unwrap_or(true)
+    {
+        // Un nom seul est resolu dans le dossier de la source.
+        let file_name = requested
+            .file_name()
+            .and_then(|value| value.to_str())
+            .filter(|value| !value.is_empty())
+            .unwrap_or("sortie");
+        input_path
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(file_name)
+    } else if let Some(parent) = requested.parent() {
+        if !parent.exists() || !parent.is_dir() {
+            set_status(ui, toaster, "Dossier de sortie invalide.".to_owned(), 2);
+            return;
         }
-    });
+        requested
+    } else {
+        requested
+    };
+
+    let output = ensure_pdf_extension(resolved);
 
     if same_path(&input_path, &output) {
         set_status(
