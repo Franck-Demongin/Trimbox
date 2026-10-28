@@ -50,6 +50,14 @@ sed \
   "$template" > "$installed_desktop"
 chmod 0644 "$installed_desktop"
 
+# Remove stale files left by the previous "trimbox" icon/desktop naming.
+# They are not used anymore and can keep GNOME associated with the wrong icon.
+rm -f "$APPS_DIR/trimbox.desktop"
+for size in 16 32 48 64 128 256 512; do
+  rm -f "$ICONS_ROOT/${size}x${size}/apps/trimbox.png"
+done
+rm -f "$ICONS_ROOT/scalable/apps/trimbox.svg"
+
 if command -v desktop-file-validate >/dev/null 2>&1; then
   desktop-file-validate "$installed_desktop"
 fi

@@ -16,6 +16,13 @@ for size in 16 32 48 64 128 256 512; do
 done
 rm -f "$ICONS_ROOT/scalable/apps/${ICON_NAME}.svg"
 
+# Also remove stale files from the previous "trimbox" naming scheme.
+rm -f "$APPS_DIR/trimbox.desktop"
+for size in 16 32 48 64 128 256 512; do
+  rm -f "$ICONS_ROOT/${size}x${size}/apps/trimbox.png"
+done
+rm -f "$ICONS_ROOT/scalable/apps/trimbox.svg"
+
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$APPS_DIR" >/dev/null 2>&1 || true
 fi

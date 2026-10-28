@@ -58,7 +58,7 @@ sudo apt-get install -y build-essential pkg-config \
 
 ## Icône
 
-La source se trouve dans `assets/icons/trimbox-icon.svg`.  
+La source se trouve dans `assets/icons/trimbox.svg`.  
 Le script `assets/icons/generate.sh` sert de référence pour régénérer les formats PNG et ICO.
 
 La commande `slint::set_xdg_app_id` organise l'application Linux.
