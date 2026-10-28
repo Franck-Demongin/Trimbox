@@ -7,7 +7,7 @@ fn main() {
         res.set_icon(icon.to_string_lossy().as_ref());
         res.set("FileDescription", "Préparation et validation PDF/X-4");
         res.set("ProductName", "Trimbox");
-        res.set("OriginalFilename", "trimbox.exe");
+        res.set("OriginalFilename", "trimbox-gui.exe");
         res.compile()
             .expect("échec de la compilation des ressources Windows");
     }

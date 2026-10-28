@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_ID="io.github.Franck-Demongin.Trimbox"
 APP_NAME="Trimbox"
-ICON_NAME="trimbox"
+ICON_NAME="$APP_ID"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -14,17 +14,17 @@ if [ ! -d "$ASSETS_DIR" ]; then
   exit 1
 fi
 
-if ! command -v trimbox >/dev/null 2>&1; then
-  if [ -x "$HOME/.cargo/bin/trimbox" ]; then
-    TRIMBOX_BIN="$HOME/.cargo/bin/trimbox"
+if command -v trimbox-gui >/dev/null 2>&1; then
+  TRIMBOX_BIN="$(command -v trimbox-gui)"
+else
+  if [ -x "$HOME/.cargo/bin/trimbox-gui" ]; then
+    TRIMBOX_BIN="$HOME/.cargo/bin/trimbox-gui"
     mkdir -p "$HOME/.local/bin"
-    ln -sfn "$TRIMBOX_BIN" "$HOME/.local/bin/trimbox"
+    ln -sfn "$TRIMBOX_BIN" "$HOME/.local/bin/trimbox-gui"
   else
-    echo "Binaire trimbox introuvable. Installez-le d'abord avec cargo install." >&2
+    echo "Binaire trimbox-gui introuvable. Installez-le d'abord avec cargo install --features gui." >&2
     exit 1
   fi
-else
-  TRIMBOX_BIN="$(command -v trimbox)"
 fi
 
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
@@ -42,11 +42,11 @@ install -m 0644 "$ASSETS_DIR/trimbox.svg" "$ICONS_ROOT/scalable/apps/${ICON_NAME
 
 mkdir -p "$APPS_DIR"
 installed_desktop="$APPS_DIR/${APP_ID}.desktop"
-template="$PROJECT_ROOT/packaging/linux/trimbox.desktop"
+template="$PROJECT_ROOT/packaging/linux/${APP_ID}.desktop"
 
 sed \
   -e "s|^TryExec=.*|TryExec=${TRIMBOX_BIN}|" \
-  -e "s|^Exec=.*|Exec=${TRIMBOX_BIN} gui|" \
+  -e "s|^Exec=.*|Exec=${TRIMBOX_BIN}|" \
   "$template" > "$installed_desktop"
 chmod 0644 "$installed_desktop"
 

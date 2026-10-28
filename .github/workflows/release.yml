@@ -49,8 +49,11 @@ jobs:
         with:
           key: ${{ runner.os }}-release-cargo
 
-      - name: Build
-        run: cargo build --release -p trimbox-cli --features gui --locked
+      - name: Build command-line interface
+        run: cargo build --release -p trimbox-cli --locked --bin trimbox
+
+      - name: Build Slint GUI
+        run: cargo build --release -p trimbox-cli --locked --features gui --bin trimbox-gui
 
       - name: Package Linux
         if: matrix.platform == 'linux'
@@ -60,8 +63,9 @@ jobs:
           STAGE="trimbox-${VERSION}-linux-x86_64"
           rm -rf "dist/${STAGE}" && mkdir -p "dist/${STAGE}"
           cp ./target/release/trimbox "dist/${STAGE}/"
+          cp ./target/release/trimbox-gui "dist/${STAGE}/"
           cp ./README.md ./LICENSE "dist/${STAGE}/"
-          cp ./packaging/linux/trimbox.desktop "dist/${STAGE}/"
+          cp ./packaging/linux/io.github.Franck-Demongin.Trimbox.desktop "dist/${STAGE}/"
           tar -czf "dist/${STAGE}.tar.gz" -C dist "${STAGE}"
           (cd dist && sha256sum "${STAGE}.tar.gz" > "${STAGE}.tar.gz.sha256")
           rm -rf "dist/${STAGE}"
@@ -76,6 +80,7 @@ jobs:
           $dist = "dist/$stage"
           New-Item -ItemType Directory -Force -Path $dist | Out-Null
           Copy-Item "./target/release/trimbox.exe" "$dist/"
+          Copy-Item "./target/release/trimbox-gui.exe" "$dist/"
           Copy-Item "./README.md" "$dist/"
           Copy-Item "./LICENSE" "$dist/"
           $archive = "dist/$stage.zip"

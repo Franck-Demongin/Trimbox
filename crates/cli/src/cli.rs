@@ -19,9 +19,6 @@ pub enum Command {
         #[command(subcommand)]
         command: PdfCommand,
     },
-    /// Lance l'interface graphique Slint, si le feature `gui` est active.
-    #[cfg(feature = "gui")]
-    Gui,
 }
 
 #[derive(Subcommand, Debug)]

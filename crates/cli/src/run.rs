@@ -126,8 +126,6 @@ pub fn run() -> Result<()> {
             println!("{}", report);
             Ok(())
         }
-        #[cfg(feature = "gui")]
-        Some(Command::Gui) => crate::gui::run(),
         None => {
             println!("Trimbox : essayez `trimbox --help`");
             Ok(())

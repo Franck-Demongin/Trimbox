@@ -4,8 +4,8 @@ Trimbox lit des documents PDF et prépare le travail autour de PDF/X-4. Le noyau
 
 ## Artefacts
 
-- Linux : `trimbox`
-- Windows : `trimbox.exe`
+- Linux : `trimbox` et `trimbox-gui`
+- Windows : `trimbox.exe` et `trimbox-gui.exe`
 
 ## Architecture
 
@@ -23,10 +23,10 @@ Compilation par défaut (ligne de commande uniquement) :
 cargo build -p trimbox-cli
 ```
 
-Compilation avec l'interface graphique :
+Compilation de l'interface graphique :
 
 ```sh
-cargo build -p trimbox-cli --features gui
+cargo build -p trimbox-cli --features gui --bin trimbox-gui
 ```
 
 Compilation complète de la workspace :
@@ -41,7 +41,7 @@ cargo build --workspace --all-features
 cargo install --locked --git https://github.com/Franck-Demongin/trimbox.git --branch master --features gui
 ```
 
-Cargo installe `trimbox` sur Linux et `trimbox.exe` sur Windows. Sur cette machine, `~/.cargo/bin` n'est pas forcément dans `PATH`.
+Cargo installe `trimbox` et `trimbox-gui` sur Linux, `trimbox.exe` et `trimbox-gui.exe` sur Windows. Sur cette machine, `~/.cargo/bin` n'est pas forcément dans `PATH`.
 
 ## Vérification
 
@@ -67,7 +67,7 @@ sudo apt-get install -y build-essential pkg-config \
 ## Application Linux
 
 - Identifiant d'application : `io.github.Franck-Demongin.Trimbox`
-- Bureau : `packaging/linux/trimbox.desktop`
+- Bureau : `packaging/linux/io.github.Franck-Demongin.Trimbox.desktop`
 - La sélection de l'identifiant est faite après la création du composant, avant l'affichage.
 
 ## Arborescence

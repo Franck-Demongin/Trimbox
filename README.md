@@ -4,8 +4,8 @@ Trimbox lit des documents PDF et prépare le travail autour de PDF/X-4. Le noyau
 
 ## Artefacts
 
-- Linux : `trimbox`
-- Windows : `trimbox.exe`
+- Linux : `trimbox` et `trimbox-gui`
+- Windows : `trimbox.exe` et `trimbox-gui.exe`
 
 ## Compilation
 
@@ -15,10 +15,10 @@ Compilation par défaut (ligne de commande uniquement) :
 cargo build -p trimbox-cli
 ```
 
-Compilation avec l'interface graphique :
+Compilation de l'interface graphique :
 
 ```sh
-cargo build -p trimbox-cli --features gui
+cargo build -p trimbox-cli --features gui --bin trimbox-gui
 ```
 
 Compilation complète de la workspace :
@@ -33,7 +33,7 @@ cargo build --workspace --all-features
 cargo install --locked --git https://github.com/Franck-Demongin/trimbox.git --branch master --features gui
 ```
 
-Cargo installe `trimbox` sur Linux et `trimbox.exe` sur Windows. Sur cette machine, `~/.cargo/bin` n'est pas forcément dans `PATH`.
+Cargo installe `trimbox` et `trimbox-gui` sur Linux, `trimbox.exe` et `trimbox-gui.exe` sur Windows. Sur cette machine, `~/.cargo/bin` n'est pas forcément dans `PATH`.
 
 ## Vérification locale
 
@@ -66,7 +66,8 @@ La commande `slint::set_xdg_app_id` organise l'application Linux.
 ## Application Linux
 
 - Identifiant d'application : `io.github.Franck-Demongin.Trimbox`
-- Fichier de bureau : `packaging/linux/trimbox.desktop`
+- Fichier de bureau : `packaging/linux/io.github.Franck-Demongin.Trimbox.desktop`
+- Commande graphique : `trimbox-gui`
 - `slint::set_xdg_app_id` est appelé après la création du composant, avant son affichage.
 
 ## Capture d'interface
