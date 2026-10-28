@@ -30,6 +30,7 @@ export component MainWindow inherits Window {
     in-out property <string> crop-height-mm: "55";
     in property <string> report-title: "Résultat";
     in property <string> report: "";
+    in property <string> source-size: "";
     in property <bool> output-available: false;
     in property <bool> report-available: false;
     in-out property <[SnackbarItem]> snackbar-items: [];
@@ -122,6 +123,13 @@ export component MainWindow inherits Window {
                         horizontal-stretch: 0;
                         clicked => { root.browse-source(); }
                     }
+                }
+
+                if root.source-size != "" : Text {
+                    text: root.source-size;
+                    wrap: word-wrap;
+                    color: Palette.foreground;
+                    font-size: Theme.font-small;
                 }
             }
         }

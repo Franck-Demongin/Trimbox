@@ -45,10 +45,28 @@ pub fn run() -> Result<()> {
             if let Some(path) = dialog.pick_file() {
                 let source = path.display().to_string();
                 let output = default_output_path(&path, "recadre");
+                let source_size = match fs::read(&path) {
+                    Ok(bytes) => match trimbox_core::pdf::load_document(&bytes) {
+                        Ok(document) => match trimbox_core::pdf::source_page_size(&document) {
+                            Ok((width_mm, height_mm, has_other_sizes)) => {
+                                let mut text =
+                                    format!("Page 1 : {:.1} x {:.1} mm", width_mm, height_mm);
+                                if has_other_sizes {
+                                    text.push_str(" (pages de tailles differentes)");
+                                }
+                                text
+                            }
+                            Err(_) => String::new(),
+                        },
+                        Err(_) => String::new(),
+                    },
+                    Err(_) => String::new(),
+                };
                 ui.set_source_path(source.clone().into());
                 ui.set_output_path(output.display().to_string().into());
                 ui.set_output_available(false);
                 ui.set_report_available(false);
+                ui.set_source_size(source_size.into());
                 set_status(&ui, &browse_snackbar_state, "Source chargée.".to_owned(), 0);
             }
         }
