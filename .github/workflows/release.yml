@@ -140,7 +140,7 @@ jobs:
           find release -maxdepth 1 -type f ! -name SHA256SUMS -exec sha256sum {} + > release/SHA256SUMS
 
       - name: Publish release
-        uses: softprops/action-gh-release@v3.0.3 # v3.0.3
+        uses: softprops/action-gh-release@v3.0.4 # v3.0.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
