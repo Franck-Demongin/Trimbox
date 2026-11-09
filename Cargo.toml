@@ -16,7 +16,7 @@ readme = "README.md"
 [workspace.dependencies]
 trimbox-core = { path = "crates/core", version = "0.3.0" }
 
-lopdf = "0.46"
+lopdf = "0.47"
 thiserror = "2.0"
 directories = "6.0"
 tracing = "0.1"
